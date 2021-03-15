@@ -103,6 +103,7 @@ export class Transaction extends SpanClass implements TransactionInterface {
     }
 
     this.spanRecorder?.spans?.forEach(span => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (span.op?.startsWith('middleware')) {
         console.log(`force-finishing ${span.description || (span as any).name}`);
         span.finish();

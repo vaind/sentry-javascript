@@ -34,6 +34,14 @@ type Router = {
   [method in Method]: (...args: any) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 } & { _router?: Router; lazyrouter: () => void; process_params: (...args: unknown[]) => void };
 
+// type RouterAsFunction = Router &
+//   ((
+//     this: NodeJS.Global,
+//     req: http.IncomingMessage,
+//     res: ExpressResponse & SentryTracingResponse,
+//     next: () => void,
+//   ) => void);
+
 interface ExpressResponse {
   once(name: string, callback: () => void): void;
 }
@@ -122,6 +130,7 @@ function wrap(fn: Function, method: Method): (...args: any[]) => void {
             op: `middleware.${method}`,
           });
           res.once('finish', () => {
+            debugger;
             span.finish();
           });
         }
@@ -143,6 +152,7 @@ function wrap(fn: Function, method: Method): (...args: any[]) => void {
           op: `middleware.${method}`,
         });
         fn.call(this, req, res, function(this: NodeJS.Global, ...args: unknown[]): void {
+          debugger;
           span?.finish();
           next.apply(this, args);
         });
@@ -164,6 +174,7 @@ function wrap(fn: Function, method: Method): (...args: any[]) => void {
           op: `middleware.${method}`,
         });
         fn.call(this, err, req, res, function(this: NodeJS.Global, ...args: unknown[]): void {
+          debugger;
           span?.finish();
           next.apply(this, args);
         });
@@ -192,12 +203,25 @@ function wrap(fn: Function, method: Method): (...args: any[]) => void {
 function wrapMiddlewareArgs(args: unknown[], method: Method): unknown[] {
   return args.map((arg: unknown) => {
     if (typeof arg === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      console.log(`wrapping handler ${(arg as any)._name || arg.name}`);
+      debugger;
+      if (arg.name === 'router') {
+        // patchMiddlewareOnRouter(arg as RouterAsFunction, method);
+      }
       return wrap(arg, method);
     }
 
     if (Array.isArray(arg)) {
       return arg.map((a: unknown) => {
         if (typeof a === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          console.log(`wrapping handler ${(a as any)._name || a.name}`);
+
+          debugger;
+          if (a.name === 'router') {
+            // patchMiddlewareOnRouter(a as RouterAsFunction, method);
+          }
           return wrap(a, method);
         }
         return a;
@@ -211,11 +235,15 @@ function wrapMiddlewareArgs(args: unknown[], method: Method): unknown[] {
 /**
  * Patches original router to utilize our tracing functionality
  */
-function patchMiddleware(router: Router, method: Method): Router {
+export function patchMiddlewareOnRouter(router: Router, method: Method): Router {
   const originalCallback = router[method];
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  console.log(`patching router ${(router as any)._name || (router as any).name}`);
+  debugger;
 
   router[method] = function(...args: unknown[]): void {
-    return originalCallback.call(this, ...wrapMiddlewareArgs(args, method));
+    console.log('xxxx');
+    return originalCallback.apply(this, wrapMiddlewareArgs(args, method));
   };
 
   return router;
@@ -241,6 +269,10 @@ function wrapProcessParams(routerPrototype: Router): void {
    *
    */
   function newProcessParams(this: Router, ...args: unknown[]): void {
+    // console.log('newProcessParams this: ', this);
+    // console.log('layer', layer);
+    console.log('in new process_params');
+
     const layer = args[0] as ExpressRouterLayer;
     const req = args[2] as { _reconstructedPath: string };
     req._reconstructedPath = req._reconstructedPath || '';
@@ -249,6 +281,20 @@ function wrapProcessParams(routerPrototype: Router): void {
     // that router. When Express finds a layer that matches the current part of the specific path being considered, it
     // temporarily adds that path to the layer (otherwise, layers only contain a regex to match to future paths).
     if (layer.path) {
+      console.log('FOUND A PATH', layer.path);
+      // console.log(
+      //   `Found layer params! Layer ${layer.name}: ${Object.keys(layer.params)}`
+      // );
+      console.log('layer.keys', layer.keys);
+      // console.log(layer.regexp.source.split("(?:([^\\/]+?))").join("*****"));
+      console.log(
+        layer.regexp.source
+          // .slice(1, -1)
+          .split('(?:([^\\/]+?))')
+          .map(bit => `(${bit})`)
+          .join('(?:([^\\/]+?))'),
+      );
+
       // This is a real hack, necessitated by the fact that Express neither keeps track of the full parameterized path
       // itself nor exports Layer, the constructor of which seems to be the only place the path as typed by the Express
       // user is accessible. Alas. So, we reconstruct it, making sure to differentiate between hard-coded path segments
@@ -271,20 +317,29 @@ function wrapProcessParams(routerPrototype: Router): void {
         .map(hardCodedSegment => `(${hardCodedSegment})`)
         // and then put all the parameter segments back in place
         .join(parameterRegexPattern);
+
+      // let reconstructedLayerPath = '';
       const pathParts = new RegExp(pathPartsRegexSource, layer.regexp.flags).exec(layer.path);
+      console.log('pathParts before', pathParts);
+
       // we wouldn't be here otherwise, but this keeps TS happy
       if (pathParts) {
         // The first (index 0) thing in the match array is the full match; the capture groups start at index 1. Even if
         // the first path segment is a parameter, there will always be at least a leading slash to take up the first
         // capture group slot. The first parameter capture group will therefore always be at index 2.
         for (let i = 2; i < pathParts.length; i += 2) {
+          // console.log('i', i);
           const keyIndex = i / 2 - 1;
+          // console.log('keyIndex', keyIndex);
+          // console.log(layer.keys[keyIndex]);
           pathParts[i] = `:${layer.keys[keyIndex].name}`;
         }
+        console.log('pathParts after', pathParts);
 
         // slice so we don't include the full match as part of the path, then glue everything back together and add it to
         // the parameterized path we're building
         req._reconstructedPath += pathParts.slice(1).join('');
+        console.log('new req._reconstructedPath', req._reconstructedPath);
       }
       // no else because on the other end `req.url` will just be used instead
     }
@@ -316,6 +371,9 @@ function wrapProcessParams(routerPrototype: Router): void {
   }
 
   routerPrototype.process_params = newProcessParams;
+  console.log('PATCHED', routerPrototype.process_params);
+  // console.log(Object.keys(expressModule));
+  // console.log(expressModule);
 }
 
 /**
@@ -327,6 +385,9 @@ export function instrumentMiddlewares(appOrRouter: Router, methods: Method[] = [
   // TODO kmclb If we do export this, pull out the `wrapProcessParams` stuff, because otherwise we end up with stuff
   // double-wrapped or triple-wrapped and that breaks transaction naming
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  console.log(`instrumenting middleware for ${(appOrRouter as any)._name || (appOrRouter as any).name}`);
+  debugger;
   // Wrap .use, .get, etc. so that each invokation creates a span. (These methods live both on the app and on its
   // individual routers, so it doesn't matter which one we're working with.)
   methods.forEach((method: Method) => patchMiddlewareOnRouter(appOrRouter, method));
@@ -347,6 +408,7 @@ export function instrumentMiddlewares(appOrRouter: Router, methods: Method[] = [
   }
 
   const routerPrototype = Object.getPrototypeOf(isApp ? appOrRouter._router : appOrRouter);
+  debugger;
   wrapProcessParams(routerPrototype);
   // TODO kmclb there's a much easier way, now that I know we can get ahold of the Layer prototype
   // it's at appOrRouter._router.stack[0].__proto__.constructor

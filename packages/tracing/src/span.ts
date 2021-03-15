@@ -173,6 +173,7 @@ export class Span implements SpanInterface {
       sampled: this.sampled,
       traceId: this.traceId,
     });
+    console.log('starting span', childSpan.description);
 
     childSpan.spanRecorder = this.spanRecorder;
     if (childSpan.spanRecorder) {
@@ -232,6 +233,7 @@ export class Span implements SpanInterface {
    * @inheritDoc
    */
   public finish(endTimestamp?: number): void {
+    console.log('called finish on span', this.description);
     this.endTimestamp = typeof endTimestamp === 'number' ? endTimestamp : timestampWithMs();
   }
 
