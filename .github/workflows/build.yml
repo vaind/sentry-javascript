@@ -43,6 +43,8 @@ jobs:
     name: Get Metadata
     runs-on: ubuntu-latest
     steps:
+      - run: echo github.event
+
       - name: Check out current commit
         uses: actions/checkout@v2
         with:
@@ -180,7 +182,6 @@ jobs:
     # Size Check will error out outside of the context of a PR
     if: ${{ github.event_name == 'pull_request' }} || ${{ startsWith(github.ref, 'refs/heads/master/') }}
     steps:
-      - run: echo github.event
       - name: Check out current commit (${{ needs.job_get_metadata.outputs.commit_label }})
         uses: actions/checkout@v2
         with:
