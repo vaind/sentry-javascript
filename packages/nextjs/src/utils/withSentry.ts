@@ -3,6 +3,7 @@ import { extractTraceparentData, hasTracingEnabled } from '@sentry/tracing';
 import { Transaction } from '@sentry/types';
 import {
   addExceptionMechanism,
+  getGlobalObject,
   isString,
   logger,
   objectify,
@@ -201,4 +202,76 @@ async function finishSentryProcessing(res: AugmentedNextApiResponse): Promise<vo
   } catch (e) {
     __DEBUG_BUILD__ && logger.log('Error while flushing events:\n', e);
   }
+}
+
+function getTransactionById(transactionId?: string): Transaction | undefined {
+  const global = getGlobalObject() as any;
+  global.__sentryTransactions__ = global.__sentryTransactions__ || {};
+  return global.__sentryTransactions__[transactionId || ''];
+}
+
+function deleteTransaction(transactionId: string): void {
+  const global = getGlobalObject() as any;
+  delete global.__sentryTransactions__[transactionId];
+}
+
+function stashTransaction(transaction: Transaction): void {
+  const global = getGlobalObject() as any;
+  global.__sentryTransactions__ = global.__sentryTransactions__ || {};
+  global.__sentryTransactions__[transaction.spanId] = transaction;
+}
+
+type UnderscoreAppContextData = {
+  [key: string]: unknown;
+  pageProps: {
+    [propName: string]: unknown;
+    __sentry_transaction_id__?: string;
+  };
+  router: { route: string };
+};
+
+type UnderscoreAppComponent = (contextData: UnderscoreAppContextData) => unknown;
+type WrappedUnderscoreAppComponent = UnderscoreAppComponent;
+
+/**
+ *
+ */
+export function withSentry_app(origUnderscoreAppComponent: UnderscoreAppComponent): WrappedUnderscoreAppComponent {
+  return function wrappedUnderscoreApp(contextData: UnderscoreAppContextData) {
+    console.log("I'm in the wrappedUnderscoreApp function returned by appWithSentry");
+
+    if (hasTracingEnabled()) {
+      let activeTransaction = getTransactionById(contextData.pageProps.__sentry_transaction_id__);
+
+      if (!activeTransaction) {
+        activeTransaction = getCurrentHub().startTransaction({
+          name: contextData.router.route,
+          metadata: { source: 'route' },
+        });
+        stashTransaction(activeTransaction);
+      }
+
+      __DEBUG_BUILD__ &&
+        logger.log(
+          `Found an active transaction. Changing its name from ${activeTransaction.name} to ${contextData.router.route}`,
+        );
+      activeTransaction.setName(contextData.router.route, 'route');
+
+      const _appWrapperSpan = activeTransaction.startChild({
+        op: '_app wrapper',
+      });
+
+      const jsx = origUnderscoreAppComponent(contextData);
+
+      _appWrapperSpan.finish();
+      activeTransaction.finish();
+      deleteTransaction(activeTransaction.spanId);
+
+      return jsx;
+    }
+
+    debugger;
+
+    return origUnderscoreAppComponent(contextData);
+  };
 }
