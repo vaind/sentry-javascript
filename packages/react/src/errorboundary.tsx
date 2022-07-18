@@ -1,4 +1,4 @@
-import { captureException, ReportDialogOptions, Scope, showReportDialog, withScope } from '@sentry/browser';
+import { getCurrentHub, Hub, ReportDialogOptions, Scope, showReportDialog } from '@sentry/browser';
 import { logger } from '@sentry/utils';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 import * as React from 'react';
@@ -35,6 +35,8 @@ export type ErrorBoundaryProps = {
    *
    */
   fallback?: React.ReactElement | FallbackRender;
+  /** Optional hub on which to call `captureException`. Useful when manually creating a hub/client. */
+  hub?: Hub;
   /** Called when the error boundary encounters an error */
   onError?(error: Error, componentStack: string, eventId: string): void;
   /** Called on componentDidMount() */
@@ -69,9 +71,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   public state: ErrorBoundaryState = INITIAL_STATE;
 
   public componentDidCatch(error: Error & { cause?: Error }, { componentStack }: React.ErrorInfo): void {
-    const { beforeCapture, onError, showDialog, dialogOptions } = this.props;
+    const { beforeCapture, onError, showDialog, dialogOptions, hub = getCurrentHub() } = this.props;
 
-    withScope(scope => {
+    hub.withScope(scope => {
       // If on React version >= 17, create stack trace from componentStack param and links
       // to to the original error using `error.cause` otherwise relies on error param for stacktrace.
       // Linking errors requires the `LinkedErrors` integration be enabled.
@@ -87,12 +89,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       if (beforeCapture) {
         beforeCapture(scope, error, componentStack);
       }
-      const eventId = captureException(error, { contexts: { react: { componentStack } } });
+      const eventId = hub.captureException(error, { captureContext: { contexts: { react: { componentStack } } } });
       if (onError) {
         onError(error, componentStack, eventId);
       }
       if (showDialog) {
-        showReportDialog({ ...dialogOptions, eventId });
+        showReportDialog({ ...dialogOptions, eventId }, hub);
       }
 
       // componentDidCatch is used over getDerivedStateFromError
