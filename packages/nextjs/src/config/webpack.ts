@@ -331,6 +331,6 @@ export function getWebpackPluginOptions(
  * ref: https://github.com/vercel/nft/issues/203
  */
 function ensureCLIBinaryExists(): boolean {
-  return fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'));
-  // return eval("fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'))");
+  // return fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'));
+  return eval("fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'))");
 }
