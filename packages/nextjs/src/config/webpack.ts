@@ -56,7 +56,10 @@ export function constructWebpackConfigFunction(
         : Array.isArray(newConfig.externals)
         ? newConfig.externals
         : [newConfig.externals]),
-      { '@sentry/cli': '@sentry/cli' },
+      {
+        '@sentry/cli': '@sentry/cli',
+        '@sentry/webpack-plugin': '@sentry/webpack-plugin',
+      },
     ];
 
     // Tell webpack to inject user config files (containing the two `Sentry.init()` calls) into the appropriate output
@@ -340,6 +343,16 @@ export function getWebpackPluginOptions(
  * ref: https://github.com/vercel/nft/issues/203
  */
 function ensureCLIBinaryExists(): boolean {
-  return fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'));
+  console.log(module);
+  for (const nodeModulesPath of module.paths) {
+    if (fs.existsSync(path.resolve(nodeModulesPath, '@sentry/cli/sentry-cli'))) {
+      console.log('found sentry-cli in', nodeModulesPath);
+      debugger;
+      return true;
+    }
+  }
+  debugger;
+  return false;
+  // return fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'));
   // return eval("fs.existsSync(path.join(require.resolve('@sentry/cli'), '../../sentry-cli'))");
 }
