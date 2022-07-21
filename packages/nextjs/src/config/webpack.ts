@@ -50,6 +50,15 @@ export function constructWebpackConfigFunction(
       newConfig = userNextConfig.webpack(newConfig, buildContext);
     }
 
+    newConfig.externals = [
+      ...(newConfig.externals === undefined
+        ? []
+        : Array.isArray(newConfig.externals)
+        ? newConfig.externals
+        : [newConfig.externals]),
+      { '@sentry/cli': '@sentry/cli' },
+    ];
+
     // Tell webpack to inject user config files (containing the two `Sentry.init()` calls) into the appropriate output
     // bundles. Store a separate reference to the original `entry` value to avoid an infinite loop. (If we don't do
     // this, we'll have a statement of the form `x.y = () => f(x.y)`, where one of the things `f` does is call `x.y`.
