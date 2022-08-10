@@ -9,7 +9,7 @@ export class SentryError extends Error {
     super(message);
 
     this.name = new.target.prototype.constructor.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    // Object.setPrototypeOf(this, new.target.prototype);
     this.logLevel = logLevel;
   }
 }
