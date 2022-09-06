@@ -4,6 +4,7 @@ export { Dedupe } from './dedupe';
 export { ExtraErrorData } from './extraerrordata';
 export { Offline } from './offline';
 export { ReportingObserver } from './reportingobserver';
+export { RequestData } from './requestdata';
 export { RewriteFrames } from './rewriteframes';
 export { SessionTiming } from './sessiontiming';
 export { Transaction } from './transaction';
