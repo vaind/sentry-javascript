@@ -1,7 +1,10 @@
+import type { IncomingMessage } from 'http';
+
 import { Baggage } from './baggage';
 import { MeasurementUnit } from './measurement';
 import { ExtractedNodeRequestData, Primitive, WorkerLocation } from './misc';
 import { Span, SpanContext } from './span';
+
 /**
  * Interface holding Transaction-specific properties
  */
@@ -142,7 +145,11 @@ export interface TransactionMetadata {
   /** The baggage object of a transaction's baggage header, used for dynamic sampling  */
   baggage?: Baggage;
 
+  /** For transactions tracing server-side request handling, the request being tracked. */
+  request?: IncomingMessage;
+
   /** For transactions tracing server-side request handling, the path of the request being tracked. */
+  /** TODO: If we rm -rf `instrumentServer`, this can go, too */
   requestPath?: string;
 
   /** Information on how a transaction name was generated. */
