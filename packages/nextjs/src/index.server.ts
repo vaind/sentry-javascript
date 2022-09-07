@@ -1,6 +1,6 @@
 import { Carrier, getHubFromCarrier, getMainCarrier } from '@sentry/hub';
-import { RewriteFrames } from '@sentry/integrations';
-import { configureScope, getCurrentHub, init as nodeInit, Integrations } from '@sentry/node';
+import { RequestData, RewriteFrames } from '@sentry/integrations';
+import { addRequestDataToEvent, configureScope, getCurrentHub, init as nodeInit, Integrations } from '@sentry/node';
 import { hasTracingEnabled } from '@sentry/tracing';
 import { EventProcessor } from '@sentry/types';
 import { escapeStringForRegex, logger } from '@sentry/utils';
@@ -110,6 +110,12 @@ function addServerIntegrations(options: NextjsOptions): void {
     },
   });
   integrations = addOrUpdateIntegration(defaultRewriteFramesIntegration, integrations);
+
+  const defaultRequestDataIntegration = new RequestData({ _addReqDataCallback: addRequestDataToEvent });
+  integrations = addOrUpdateIntegration(defaultRequestDataIntegration, integrations, {
+    // Specify the `@sentry/node` version of `addRequestDataToEvent`, so we get the injected dependencies
+    '_options._addReqDataCallback': addRequestDataToEvent,
+  });
 
   if (hasTracingEnabled(options)) {
     const defaultHttpTracingIntegration = new Integrations.Http({ tracing: true });
