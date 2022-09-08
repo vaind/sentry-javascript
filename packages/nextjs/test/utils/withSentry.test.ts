@@ -119,6 +119,7 @@ describe('withSentry', () => {
           metadata: {
             baggage: expect.any(Array),
             source: 'route',
+            request: expect.objectContaining({ url: 'http://dogs.are.great' }),
           },
         },
         { request: expect.objectContaining({ url: 'http://dogs.are.great' }) },
