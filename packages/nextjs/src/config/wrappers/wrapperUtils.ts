@@ -121,6 +121,7 @@ export function callTracedServerSideDataFetcher<F extends (...args: any[]) => Pr
     const currentScope = getCurrentHub().getScope();
     if (currentScope) {
       currentScope.setSpan(dataFetcherSpan);
+      currentScope.setSDKProcessingMetadata({ request: req });
       currentScope.addEventProcessor(event =>
         event.type !== 'transaction'
           ? addRequestDataToEvent(event, req, {
