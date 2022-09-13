@@ -51,6 +51,9 @@ export function constructWebpackConfigFunction(
     const { isServer, dev: isDev, dir: projectDir } = buildContext;
     let newConfig = { ...incomingConfig };
 
+    if (isServer) {
+      console.log('target:', buildContext.config.target);
+    }
     // if user has custom webpack config (which always takes the form of a function), run it so we have actual values to
     // work with
     if ('webpack' in userNextConfig && typeof userNextConfig.webpack === 'function') {
