@@ -175,17 +175,22 @@ export function extractPathForTransaction(
 type TransactionNamingScheme = 'path' | 'methodPath' | 'handler';
 
 /** JSDoc */
-function extractTransaction(req: CrossPlatformRequest, type: boolean | TransactionNamingScheme): string {
+function extractTransaction(
+  req: CrossPlatformRequest,
+  options: { type: boolean | TransactionNamingScheme; customRoute?: string },
+): string {
+  const { type, customRoute } = options;
+
   switch (type) {
     case 'path': {
-      return extractPathForTransaction(req, { path: true })[0];
+      return extractPathForTransaction(req, { path: true, customRoute })[0];
     }
     case 'handler': {
       return (req.route && req.route.stack && req.route.stack[0] && req.route.stack[0].name) || '<anonymous>';
     }
     case 'methodPath':
     default: {
-      return extractPathForTransaction(req, { path: true, method: true })[0];
+      return extractPathForTransaction(req, { path: true, method: true, customRoute })[0];
     }
   }
 }
@@ -393,7 +398,7 @@ export function addRequestDataToEvent(
   if (include.transaction && !event.transaction) {
     // TODO do we even need this anymore?
     // TODO make this work for nextjs
-    event.transaction = extractTransaction(req, include.transaction);
+    event.transaction = extractTransaction(req, { type: include.transaction });
   }
 
   return event;
