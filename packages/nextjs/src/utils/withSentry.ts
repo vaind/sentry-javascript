@@ -10,11 +10,21 @@ import {
   stripUrlQueryAndFragment,
 } from '@sentry/utils';
 import * as domain from 'domain';
-import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from 'next';
 
-// This is the same as the `NextApiHandler` type, except instead of having a return type of `void | Promise<void>`, it's
-// only `Promise<void>`, because wrapped handlers are always async
-export type WrappedNextApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>;
+// These are the same as the official `NextApiHandler` type, except
+//
+// a) Instead of having a return type of `void | Promise<void>` (Next < 12.1.6) or `unknown | Promise<unknown>` (Next
+// 12.1.6+), the unwrapped version has both.
+//
+// b) The wrapped version returns only promises, because wrapped handlers are always async.
+//
+// TODO: Fix the need for the multi-version hack. See XXXXXX.
+export type NextApiHandler = (
+  req: NextApiRequest,
+  res: NextApiResponse,
+) => void | Promise<void> | unknown | Promise<unknown>;
+export type WrappedNextApiHandler = (req: NextApiRequest, res: NextApiResponse) => Promise<void> | Promise<unknown>;
 
 export type AugmentedNextApiResponse = NextApiResponse & {
   __sentryTransaction?: Transaction;
