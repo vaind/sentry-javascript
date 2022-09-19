@@ -2,9 +2,17 @@
   "extends": "./packages/typescript/tsconfig.json",
 
   "compilerOptions": {
+    // This is necessary because, at least as of version 1.18.9, `@sentry/webpack-plugin` doesn't export the plugin in
+    // an ESM-friendly way (there may be other dev dependencies for which this is true, so if/when that's fixed, run a
+    // full build and test before getting rid of this)
     "allowSyntheticDefaultImports": true,
+    // This file is the root for all of the repo's tsconfigs. In each package, we only want one of the configs
+    // (`tsconfig.types.json`) to emit types, so we set these to `false` for the general case and let the types-specfic
+    // tsconfig set them to `true`.
     "declaration": false,
     "declarationMap": false,
+    // There's no reason we need to be checking the type-correctness of the parts of our dependencies we don't use, and
+    // doing so slows down typechecking (which is already the slowest part of our build).
     "skipLibCheck": true,
     // Setting this to `false` causes TS to include the full code for each helper it injects, which allows us to remove
     // `tslib` as a dependency, with the advantage that it means we don't have to worry about `tslib` version
