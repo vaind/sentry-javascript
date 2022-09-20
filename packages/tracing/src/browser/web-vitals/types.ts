@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+import { LayoutShift } from './getCLS';
+import { LargestContentfulPaint } from './onLCP';
+
 export interface Metric {
   // The name of the metric (in acronym form).
-  name: 'CLS' | 'FCP' | 'FID' | 'LCP' | 'TTFB' | 'UpdatedCLS';
+  name: 'CLS' | 'FCP' | 'FID' | 'INP' | 'LCP' | 'TTFB' | 'UpdatedCLS';
 
   // The current value of the metric.
   value: number;
@@ -42,14 +45,20 @@ export interface Metric {
 export interface ReportHandler {
   (metric: Metric): void;
 }
+export interface ReportCallback {
+  (metric: Metric): void;
+}
+
+export interface ReportOpts {
+  reportAllChanges?: boolean;
+  durationThreshold?: number;
+}
 
 // https://wicg.github.io/event-timing/#sec-performance-event-timing
 export interface PerformanceEventTiming extends PerformanceEntry {
-  processingStart: DOMHighResTimeStamp;
-  processingEnd: DOMHighResTimeStamp;
   duration: DOMHighResTimeStamp;
-  cancelable?: boolean;
-  target?: Element;
+  interactionId?: number;
+  processingStart: number;
 }
 
 export type FirstInputPolyfillEntry = Omit<PerformanceEventTiming, 'processingEnd' | 'toJSON'>;
@@ -112,6 +121,38 @@ export interface WebVitalsGlobal {
   firstInputPolyfill: (onFirstInput: FirstInputPolyfillCallback) => void;
   resetFirstInputPolyfill: () => void;
   firstHiddenTime: number;
+}
+
+/**
+ * An LCP-specific version of the Metric object.
+ */
+export interface LCPMetric extends Metric {
+  name: 'LCP';
+  entries: LargestContentfulPaint[];
+}
+
+/**
+ * An FID-specific version of the Metric object.
+ */
+export interface FIDMetric extends Metric {
+  name: 'FID';
+  entries: (PerformanceEventTiming | FirstInputPolyfillEntry)[];
+}
+
+/**
+ * A CLS-specific version of the Metric object.
+ */
+export interface CLSMetric extends Metric {
+  name: 'CLS';
+  entries: LayoutShift[];
+}
+
+/**
+ * An INP-specific version of the Metric object.
+ */
+export interface INPMetric extends Metric {
+  name: 'INP';
+  entries: PerformanceEventTiming[];
 }
 
 declare global {

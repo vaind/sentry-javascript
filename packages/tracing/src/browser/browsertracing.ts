@@ -77,7 +77,7 @@ export interface BrowserTracingOptions extends RequestInstrumentationOptions {
    *
    * Default: undefined
    */
-  _experiments?: Partial<{ enableLongTask: boolean }>;
+  _experiments?: Partial<{ enableLongTask: boolean; enableINP: boolean }>;
 
   /**
    * beforeNavigate is called before a pageload/navigation transaction is created and allows users to modify transaction
@@ -109,7 +109,7 @@ const DEFAULT_BROWSER_TRACING_OPTIONS = {
   routingInstrumentation: instrumentRoutingWithDefaults,
   startTransactionOnLocationChange: true,
   startTransactionOnPageLoad: true,
-  _experiments: { enableLongTask: true },
+  _experiments: { enableLongTask: true, enableINP: false },
   ...defaultRequestInstrumentationOptions,
 };
 
@@ -156,7 +156,7 @@ export class BrowserTracing implements Integration {
     };
 
     const { _metricOptions } = this.options;
-    startTrackingWebVitals(_metricOptions && _metricOptions._reportAllChanges);
+    startTrackingWebVitals(_metricOptions && _metricOptions._reportAllChanges, this.options._experiments?.enableINP);
     if (this.options._experiments?.enableLongTask) {
       startTrackingLongTasks();
     }

@@ -17,9 +17,9 @@
 import { bindReporter } from './lib/bindReporter';
 import { getVisibilityWatcher } from './lib/getVisibilityWatcher';
 import { initMetric } from './lib/initMetric';
-import { observe, PerformanceEntryHandler } from './lib/observe';
+import { observe } from './lib/observe';
 import { onHidden } from './lib/onHidden';
-import { ReportHandler } from './types';
+import { LCPMetric, ReportHandler, ReportOpts } from './types';
 
 // https://wicg.github.io/largest-contentful-paint/#sec-largest-contentful-paint-interface
 export interface LargestContentfulPaint extends PerformanceEntry {
@@ -34,36 +34,35 @@ export interface LargestContentfulPaint extends PerformanceEntry {
 
 const reportedMetricIDs: Record<string, boolean> = {};
 
-export const getLCP = (onReport: ReportHandler, reportAllChanges?: boolean): void => {
+export const onLCP = (onReport: ReportHandler, opts: ReportOpts = {}): void => {
   const visibilityWatcher = getVisibilityWatcher();
   const metric = initMetric('LCP');
   let report: ReturnType<typeof bindReporter>;
 
-  const entryHandler = (entry: PerformanceEntry): void => {
-    // The startTime attribute returns the value of the renderTime if it is not 0,
-    // and the value of the loadTime otherwise.
-    const value = entry.startTime;
+  const handleEntries = (entries: LCPMetric['entries']): void => {
+    const lastEntry = entries[entries.length - 1] as LargestContentfulPaint;
+    if (lastEntry) {
+      // This is modified from the web vitals library to preserve behaviour before we make a breaking change.
+      // This simply uses startTime in lieu of subtracting activationStart from the navigation entry.
+      const value = lastEntry.startTime;
 
-    // If the page was hidden prior to paint time of the entry,
-    // ignore it and mark the metric as final, otherwise add the entry.
-    if (value < visibilityWatcher.firstHiddenTime) {
-      metric.value = value;
-      metric.entries.push(entry);
-    }
-
-    if (report) {
-      report();
+      // Only report if the page wasn't hidden prior to LCP.
+      if (value < visibilityWatcher.firstHiddenTime) {
+        metric.value = value;
+        metric.entries = [lastEntry];
+        report();
+      }
     }
   };
 
-  const po = observe('largest-contentful-paint', entryHandler);
+  const po = observe('largest-contentful-paint', handleEntries);
 
   if (po) {
-    report = bindReporter(onReport, metric, reportAllChanges);
+    report = bindReporter(onReport, metric, opts.reportAllChanges);
 
     const stopListening = (): void => {
       if (!reportedMetricIDs[metric.id]) {
-        po.takeRecords().map(entryHandler as PerformanceEntryHandler);
+        handleEntries(po.takeRecords() as LCPMetric['entries']);
         po.disconnect();
         reportedMetricIDs[metric.id] = true;
         report(true);

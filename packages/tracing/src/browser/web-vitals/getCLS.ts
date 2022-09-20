@@ -16,9 +16,9 @@
 
 import { bindReporter } from './lib/bindReporter';
 import { initMetric } from './lib/initMetric';
-import { observe, PerformanceEntryHandler } from './lib/observe';
+import { observe } from './lib/observe';
 import { onHidden } from './lib/onHidden';
-import { ReportHandler } from './types';
+import { CLSMetric, ReportHandler } from './types';
 
 // https://wicg.github.io/layout-instability/#sec-layout-shift
 export interface LayoutShift extends PerformanceEntry {
@@ -41,47 +41,45 @@ export const getCLS = (onReport: ReportHandler, reportAllChanges?: boolean): voi
   let sessionValue = 0;
   let sessionEntries: PerformanceEntry[] = [];
 
-  const entryHandler = (entry: LayoutShift): void => {
-    // Only count layout shifts without recent user input.
-    // TODO: Figure out why entry can be undefined
-    if (entry && !entry.hadRecentInput) {
-      const firstSessionEntry = sessionEntries[0];
-      const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
+  const handleEntries = (entries: LayoutShift[]): void => {
+    entries.forEach(entry => {
+      // Only count layout shifts without recent user input.
+      if (!entry.hadRecentInput) {
+        const firstSessionEntry = sessionEntries[0];
+        const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
 
-      // If the entry occurred less than 1 second after the previous entry and
-      // less than 5 seconds after the first entry in the session, include the
-      // entry in the current session. Otherwise, start a new session.
-      if (
-        sessionValue &&
-        sessionEntries.length !== 0 &&
-        entry.startTime - lastSessionEntry.startTime < 1000 &&
-        entry.startTime - firstSessionEntry.startTime < 5000
-      ) {
-        sessionValue += entry.value;
-        sessionEntries.push(entry);
-      } else {
-        sessionValue = entry.value;
-        sessionEntries = [entry];
-      }
+        // If the entry occurred less than 1 second after the previous entry and
+        // less than 5 seconds after the first entry in the session, include the
+        // entry in the current session. Otherwise, start a new session.
+        if (
+          sessionValue &&
+          entry.startTime - lastSessionEntry.startTime < 1000 &&
+          entry.startTime - firstSessionEntry.startTime < 5000
+        ) {
+          sessionValue += entry.value;
+          sessionEntries.push(entry);
+        } else {
+          sessionValue = entry.value;
+          sessionEntries = [entry];
+        }
 
-      // If the current session value is larger than the current CLS value,
-      // update CLS and the entries contributing to it.
-      if (sessionValue > metric.value) {
-        metric.value = sessionValue;
-        metric.entries = sessionEntries;
-        if (report) {
+        // If the current session value is larger than the current CLS value,
+        // update CLS and the entries contributing to it.
+        if (sessionValue > metric.value) {
+          metric.value = sessionValue;
+          metric.entries = sessionEntries;
           report();
         }
       }
-    }
+    });
   };
 
-  const po = observe('layout-shift', entryHandler as PerformanceEntryHandler);
+  const po = observe('layout-shift', handleEntries);
   if (po) {
     report = bindReporter(onReport, metric, reportAllChanges);
 
     onHidden(() => {
-      po.takeRecords().map(entryHandler as PerformanceEntryHandler);
+      handleEntries(po.takeRecords() as CLSMetric['entries']);
       report(true);
     });
   }

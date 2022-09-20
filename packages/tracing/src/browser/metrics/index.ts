@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { Measurements } from '@sentry/types';
+import { Measurements, MeasurementUnit } from '@sentry/types';
 import { browserPerformanceTimeOrigin, getGlobalObject, htmlTreeAsString, logger } from '@sentry/utils';
 
 import { IdleTransaction } from '../../idletransaction';
@@ -7,9 +7,10 @@ import { Transaction } from '../../transaction';
 import { getActiveTransaction, msToSec } from '../../utils';
 import { getCLS, LayoutShift } from '../web-vitals/getCLS';
 import { getFID } from '../web-vitals/getFID';
-import { getLCP, LargestContentfulPaint } from '../web-vitals/getLCP';
 import { getVisibilityWatcher } from '../web-vitals/lib/getVisibilityWatcher';
-import { observe, PerformanceEntryHandler } from '../web-vitals/lib/observe';
+import { observe } from '../web-vitals/lib/observe';
+import { onINP } from '../web-vitals/onINP';
+import { LargestContentfulPaint, onLCP } from '../web-vitals/onLCP';
 import { NavigatorDeviceMemory, NavigatorNetworkInformation } from '../web-vitals/types';
 import { _startChild, isMeasurementValue } from './utils';
 
@@ -22,13 +23,14 @@ function getBrowserPerformanceAPI(): Performance | undefined {
 let _performanceCursor: number = 0;
 
 let _measurements: Measurements = {};
+let _inpMeasurements: Measurements = {};
 let _lcpEntry: LargestContentfulPaint | undefined;
 let _clsEntry: LayoutShift | undefined;
 
 /**
  * Start tracking web vitals
  */
-export function startTrackingWebVitals(reportAllChanges: boolean = false): void {
+export function startTrackingWebVitals(reportAllChanges: boolean = false, trackINP: boolean = false): void {
   const performance = getBrowserPerformanceAPI();
   if (performance && browserPerformanceTimeOrigin) {
     if (performance.mark) {
@@ -37,6 +39,9 @@ export function startTrackingWebVitals(reportAllChanges: boolean = false): void 
     _trackCLS();
     _trackLCP(reportAllChanges);
     _trackFID();
+    if (trackINP) {
+      _trackINP(reportAllChanges);
+    }
   }
 }
 
@@ -44,7 +49,7 @@ export function startTrackingWebVitals(reportAllChanges: boolean = false): void 
  * Start tracking long tasks.
  */
 export function startTrackingLongTasks(): void {
-  const entryHandler: PerformanceEntryHandler = (entry: PerformanceEntry): void => {
+  const entryHandler = (entry: PerformanceEntry): void => {
     const transaction = getActiveTransaction() as IdleTransaction | undefined;
     if (!transaction) {
       return;
@@ -59,7 +64,11 @@ export function startTrackingLongTasks(): void {
     });
   };
 
-  observe('longtask', entryHandler);
+  const entriesHandler = (entries: PerformanceEntry[]): void => {
+    entries.forEach(entryHandler);
+  };
+
+  observe('longtask', entriesHandler);
 }
 
 /** Starts tracking the Cumulative Layout Shift on the current page. */
@@ -81,16 +90,19 @@ function _trackCLS(): void {
 
 /** Starts tracking the Largest Contentful Paint on the current page. */
 function _trackLCP(reportAllChanges: boolean): void {
-  getLCP(metric => {
-    const entry = metric.entries.pop();
-    if (!entry) {
-      return;
-    }
+  onLCP(
+    metric => {
+      const entry = metric.entries.pop();
+      if (!entry) {
+        return;
+      }
 
-    __DEBUG_BUILD__ && logger.log('[Measurements] Adding LCP');
-    _measurements['lcp'] = { value: metric.value, unit: 'millisecond' };
-    _lcpEntry = entry as LargestContentfulPaint;
-  }, reportAllChanges);
+      __DEBUG_BUILD__ && logger.log('[Measurements] Adding LCP');
+      _measurements['lcp'] = { value: metric.value, unit: 'millisecond' };
+      _lcpEntry = entry as LargestContentfulPaint;
+    },
+    { reportAllChanges },
+  );
 }
 
 /** Starts tracking the First Input Delay on the current page. */
@@ -107,6 +119,25 @@ function _trackFID(): void {
     _measurements['fid'] = { value: metric.value, unit: 'millisecond' };
     _measurements['mark.fid'] = { value: timeOrigin + startTime, unit: 'second' };
   });
+}
+
+/** Starts tracking the Interaction to Next Paint on the current page. */
+function _trackINP(reportAllChanges: boolean): void {
+  onINP(
+    metric => {
+      const entry = metric.entries.pop();
+      if (!entry) {
+        return;
+      }
+
+      const timeOrigin = msToSec(browserPerformanceTimeOrigin as number);
+      const startTime = msToSec(entry.startTime);
+      __DEBUG_BUILD__ && logger.log('[Measurements] Adding INP');
+      _measurements['inp'] = { value: metric.value, unit: 'millisecond' };
+      _measurements['mark.inp'] = { value: timeOrigin + startTime, unit: 'second' };
+    },
+    { reportAllChanges },
+  );
 }
 
 /** Add performance related spans to a transaction */
@@ -227,6 +258,19 @@ export function addPerformanceEntries(transaction: Transaction): void {
 
       // Delete mark.fid as we don't want it to be part of final payload
       delete _measurements['mark.fid'];
+    }
+
+    if (_measurements['inp']) {
+      const inpMark = _measurements['mark.inp'];
+      // create span for INP
+      _startChild(transaction, {
+        description: 'interaction to next paint',
+        endTimestamp: inpMark.value + msToSec(_measurements['inp'].value),
+        op: 'web.vitals',
+        startTimestamp: inpMark.value,
+      });
+
+      delete _measurements['mark.inp'];
     }
 
     // If FCP is not recorded we should not record the cls value

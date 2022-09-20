@@ -14,8 +14,18 @@
  * limitations under the License.
  */
 
-export interface PerformanceEntryHandler {
-  (entry: PerformanceEntry): void;
+import { LayoutShift } from '../getCLS';
+import { LargestContentfulPaint } from '../onLCP';
+import { FirstInputPolyfillEntry, NavigationTimingPolyfillEntry, PerformanceEventTiming } from '../types';
+
+export interface PerformanceEntryMap {
+  event: PerformanceEventTiming[];
+  'layout-shift': LayoutShift[];
+  'largest-contentful-paint': LargestContentfulPaint[];
+  'first-input': PerformanceEventTiming[] | FirstInputPolyfillEntry[];
+  navigation: PerformanceNavigationTiming[] | NavigationTimingPolyfillEntry[];
+  resource: PerformanceResourceTiming[];
+  longtask: PerformanceEventTiming[];
 }
 
 /**
@@ -26,7 +36,11 @@ export interface PerformanceEntryHandler {
  * This function also feature-detects entry support and wraps the logic in a
  * try/catch to avoid errors in unsupporting browsers.
  */
-export const observe = (type: string, callback: PerformanceEntryHandler): PerformanceObserver | undefined => {
+export const observe = <K extends keyof PerformanceEntryMap>(
+  type: K,
+  callback: (entries: PerformanceEntryMap[K]) => void,
+  opts?: PerformanceObserverInit,
+): PerformanceObserver | undefined => {
   try {
     if (PerformanceObserver.supportedEntryTypes.includes(type)) {
       // More extensive feature detect needed for Firefox due to:
@@ -35,9 +49,19 @@ export const observe = (type: string, callback: PerformanceEntryHandler): Perfor
         return;
       }
 
-      const po: PerformanceObserver = new PerformanceObserver(l => l.getEntries().map(callback));
+      const po = new PerformanceObserver(list => {
+        callback(list.getEntries() as PerformanceEntryMap[K]);
+      });
 
-      po.observe({ type, buffered: true });
+      po.observe(
+        Object.assign(
+          {
+            type,
+            buffered: true,
+          },
+          opts || {},
+        ) as PerformanceObserverInit,
+      );
       return po;
     }
   } catch (e) {

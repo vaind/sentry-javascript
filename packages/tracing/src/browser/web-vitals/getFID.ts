@@ -17,9 +17,9 @@
 import { bindReporter } from './lib/bindReporter';
 import { getVisibilityWatcher } from './lib/getVisibilityWatcher';
 import { initMetric } from './lib/initMetric';
-import { observe, PerformanceEntryHandler } from './lib/observe';
+import { observe } from './lib/observe';
 import { onHidden } from './lib/onHidden';
-import { PerformanceEventTiming, ReportHandler } from './types';
+import { FIDMetric, PerformanceEventTiming, ReportHandler } from './types';
 
 export const getFID = (onReport: ReportHandler, reportAllChanges?: boolean): void => {
   const visibilityWatcher = getVisibilityWatcher();
@@ -35,11 +35,16 @@ export const getFID = (onReport: ReportHandler, reportAllChanges?: boolean): voi
     }
   };
 
-  const po = observe('first-input', entryHandler as PerformanceEntryHandler);
+  const handleEntries = (entries: FIDMetric['entries']): void => {
+    (entries as PerformanceEventTiming[]).forEach(entryHandler);
+  };
+
+  const po = observe('first-input', handleEntries);
+
   if (po) {
     report = bindReporter(onReport, metric, reportAllChanges);
     onHidden(() => {
-      po.takeRecords().map(entryHandler as PerformanceEntryHandler);
+      handleEntries(po.takeRecords() as FIDMetric['entries']);
       po.disconnect();
     }, true);
   }
