@@ -82,3 +82,5 @@ describe('extractTraceparentData', () => {
     expect(extractTraceparentData('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-x')).toBeUndefined();
   });
 });
+
+describe('trace', () => {});

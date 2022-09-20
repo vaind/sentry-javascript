@@ -1,5 +1,8 @@
 import { getCurrentHub, Hub } from '@sentry/hub';
-import { Options, Transaction } from '@sentry/types';
+import { Options, Scope, SpanContext, Transaction } from '@sentry/types';
+import { isThenable } from '@sentry/utils';
+
+import { Span } from './span';
 
 /**
  * The `extractTraceparentData` function and `TRACEPARENT_REGEXP` constant used
@@ -14,6 +17,61 @@ import { Options, Transaction } from '@sentry/types';
  * See https://github.com/getsentry/sentry-javascript/issues/4642 for more details.
  */
 export { TRACEPARENT_REGEXP, extractTraceparentData } from '@sentry/utils';
+
+interface TraceOptions {
+  hub?: Hub;
+}
+
+/**
+ * Traces a callback. This function is experimental and might
+ * experience breaking changes at any time.
+ *
+ * @experimental
+ */
+export function trace<T>(
+  ctx: SpanContext,
+  callback: (scope?: Scope) => T,
+  { hub = getCurrentHub() }: TraceOptions = {},
+): T {
+  const scope = hub.getScope();
+  const parentSpan = scope?.getSpan();
+
+  const span = parentSpan?.startChild(ctx);
+  scope?.setSpan(span);
+
+  function finishSpan(finishedSpan?: Span, isError: boolean = false): void {
+    if (!finishedSpan) {
+      return;
+    }
+    if (isError) {
+      finishedSpan.setStatus('internal_error');
+    }
+    finishedSpan.finish();
+    scope?.setSpan(parentSpan);
+  }
+
+  try {
+    const rv = callback(scope);
+    if (isThenable(rv)) {
+      return rv.then(
+        r => {
+          finishSpan(span);
+          return r;
+        },
+        e => {
+          finishSpan(span, true);
+          throw e;
+        },
+      ) as unknown as T;
+    }
+
+    finishSpan(span);
+    return rv;
+  } catch (e) {
+    finishSpan(span, true);
+    throw e;
+  }
+}
 
 /**
  * Determines if tracing is currently enabled.
