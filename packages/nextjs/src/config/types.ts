@@ -56,7 +56,18 @@ export type UserSentryOptions = {
   widenClientFileUpload?: boolean;
 
   // Automatically instrument Next.js data fetching methods and Next.js API routes
+  // TODO (v8): Remove the experimental version of this flag
   autoInstrumentServerFunctions?: boolean;
+
+  experiments?: {
+    /**
+     *  Automatically wrap `getInitialProps`, `getServerSideProps`, `getStaticProps`, and API routes in order to
+     *  instrument them for tracing.
+     *
+     * @deprecated Please use `sentry.autoInstrumentServerFunctions`
+     */
+    autoWrapDataFetchers?: boolean;
+  };
 };
 
 export type NextConfigFunction = (phase: string, defaults: { defaultConfig: NextConfigObject }) => NextConfigObject;

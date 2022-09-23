@@ -79,6 +79,14 @@ export function constructWebpackConfigFunction(
         ],
       };
 
+      // eslint-disable-next-line deprecation/deprecation
+      if (userSentryOptions.experiments?.autoWrapDataFetchers) {
+        logger.warn(
+          '`sentry.experiments?.autoWrapDataFetchers` is deprecated. Please use Please use `sentry.autoInstrumentServerFunctions` instead.',
+        );
+        userSentryOptions.autoInstrumentServerFunctions = true;
+      }
+
       if (userSentryOptions.autoInstrumentServerFunctions) {
         const pagesDir = newConfig.resolve?.alias?.['private-next-pages'] as string;
 
