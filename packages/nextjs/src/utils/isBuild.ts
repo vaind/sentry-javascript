@@ -13,6 +13,8 @@ export function isBuild(): boolean {
   // or
   //   `node /var/runtime/index.js`,
   // so we never drop into the `if` in the first place.
+  console.log('isBuild called. process.argv:', process.argv, 'SENTRY_BUILD_PHASE:', process.env.SENTRY_BUILD_PHASE);
+
   if (process.argv.includes('build') || process.env.SENTRY_BUILD_PHASE) {
     process.env.SENTRY_BUILD_PHASE = 'true';
     return true;
