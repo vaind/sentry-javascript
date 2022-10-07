@@ -86,7 +86,7 @@ export function constructWebpackConfigFunction(
         const pageExtensions = userNextConfig.pageExtensions || ['tsx', 'ts', 'jsx', 'js'];
         const pageExtensionRegex = pageExtensions.map(escapeStringForRegex).join('|');
 
-        newConfig.module.rules.push({
+        newConfig.module.rules.unshift({
           // Nextjs allows the `pages` folder to optionally live inside a `src` folder
           test: new RegExp(`${escapeStringForRegex(projectDir)}(/src)?/pages/.*\\.(${pageExtensionRegex})`),
           use: [
