@@ -92,7 +92,7 @@ export class RequestData implements Integration {
     // the moment it lives here, though, until https://github.com/getsentry/sentry-javascript/issues/5718 is addressed.
     // (TL;DR: Those functions touch many parts of the repo in many different ways, and need to be clened up. Once
     // that's happened, it will be easier to add this logic in without worrying about unexpected side effects.)
-    const { include, addRequestData, transactionNamingScheme } = this._options;
+    const { addRequestData, transactionNamingScheme } = this._options;
 
     addGlobalEventProcessor(event => {
       const hub = getCurrentHub();
@@ -105,7 +105,7 @@ export class RequestData implements Integration {
         return event;
       }
 
-      const processedEvent = addRequestData(event, req, { include: formatIncludeOption(include) });
+      const processedEvent = addRequestData(event, req, convertReqDataIntegrationOptsToAddReqDataOpts(this._options));
 
       // Transaction events already have the right `transaction` value
       if (event.type === 'transaction' || transactionNamingScheme === 'handler') {
@@ -139,12 +139,13 @@ export class RequestData implements Integration {
   }
 }
 
-/** Convert `include` option to match what `addRequestDataToEvent` expects */
+/** Convert this integration's options to match what `addRequestDataToEvent` expects */
 /** TODO: Can possibly be deleted once https://github.com/getsentry/sentry-javascript/issues/5718 is fixed */
-function formatIncludeOption(
-  integrationInclude: RequestDataIntegrationOptions['include'] = {},
-): AddRequestDataToEventOptions['include'] {
-  const { ip, user, ...requestOptions } = integrationInclude;
+function convertReqDataIntegrationOptsToAddReqDataOpts(
+  integrationOptions: RequestDataIntegrationOptions,
+): AddRequestDataToEventOptions {
+  const { transactionNamingScheme } = integrationOptions;
+  const { ip, user, ...requestOptions } = integrationOptions.include;
 
   const requestIncludeKeys: string[] = [];
   for (const [key, value] of Object.entries(requestOptions)) {
@@ -169,9 +170,12 @@ function formatIncludeOption(
   }
 
   return {
-    ip,
-    user: addReqDataUserOpt,
-    request: requestIncludeKeys.length !== 0 ? requestIncludeKeys : undefined,
+    include: {
+      ip,
+      user: addReqDataUserOpt,
+      request: requestIncludeKeys.length !== 0 ? requestIncludeKeys : undefined,
+      transaction: transactionNamingScheme,
+    },
   };
 }
 
