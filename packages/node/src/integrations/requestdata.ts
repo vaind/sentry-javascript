@@ -4,12 +4,7 @@
 import { EventProcessor, Hub, Integration, Transaction } from '@sentry/types';
 import { extractPathForTransaction } from '@sentry/utils';
 
-import {
-  addRequestDataToEvent,
-  AddRequestDataToEventOptions,
-  DEFAULT_USER_INCLUDES,
-  TransactionNamingScheme,
-} from '../requestdata';
+import { addRequestDataToEvent, AddRequestDataToEventOptions, TransactionNamingScheme } from '../requestdata';
 
 type RequestDataOptions = {
   /**
@@ -22,7 +17,13 @@ type RequestDataOptions = {
     ip?: boolean;
     query_string?: boolean;
     url?: boolean;
-    user?: boolean | Array<typeof DEFAULT_USER_INCLUDES[number]>;
+    user?:
+      | boolean
+      | {
+          id: boolean;
+          username: boolean;
+          email: boolean;
+        };
   };
 
   /** Whether to identify transactions by parameterized path, parameterized path with method, or handler name */
@@ -46,7 +47,7 @@ const DEFAULT_OPTIONS = {
     ip: false,
     query_string: true,
     url: true,
-    user: DEFAULT_USER_INCLUDES,
+    user: true, // includes `id`, `username`, and `email`
   },
   transactionNamingScheme: 'methodpath',
 };
@@ -152,9 +153,24 @@ function formatIncludeOption(
     }
   }
 
+  let addReqDataUserOpt;
+  if (user === undefined) {
+    addReqDataUserOpt = true;
+  } else if (typeof user === 'boolean') {
+    addReqDataUserOpt = user;
+  } else {
+    const userIncludeKeys: string[] = [];
+    for (const [key, value] of Object.entries(user)) {
+      if (value) {
+        userIncludeKeys.push(key);
+      }
+    }
+    addReqDataUserOpt = userIncludeKeys;
+  }
+
   return {
     ip,
-    user,
+    user: addReqDataUserOpt,
     request: requestIncludeKeys.length !== 0 ? requestIncludeKeys : undefined,
   };
 }
