@@ -5,6 +5,7 @@ import { LoaderThis } from './types';
 
 type LoaderOptions = {
   distDir: string;
+  hasMiddleware: boolean;
 };
 
 /**
@@ -12,15 +13,16 @@ type LoaderOptions = {
  */
 export default function prefixLoader(this: LoaderThis<LoaderOptions>, userCode: string): string {
   // We know one or the other will be defined, depending on the version of webpack being used
-  const { distDir } = 'getOptions' in this ? this.getOptions() : this.query;
+  const { distDir, hasMiddleware } = 'getOptions' in this ? this.getOptions() : this.query;
 
   const templatePath = path.resolve(__dirname, '../templates/prefixLoaderTemplate.js');
   // make sure the template is included when runing `webpack watch`
   this.addDependency(templatePath);
 
-  // Fill in the placeholder
+  // Fill in placehoolders
   let templateCode = fs.readFileSync(templatePath).toString();
   templateCode = templateCode.replace('__DIST_DIR__', distDir.replace(/\\/g, '\\\\'));
+  templateCode = templateCode.replace('__HAS_MIDDLEWARE__', hasMiddleware ? 'true' : 'false');
 
   return `${templateCode}\n${userCode}`;
 }

@@ -58,6 +58,13 @@ export function constructWebpackConfigFunction(
     }
 
     if (isServer) {
+      const pagesDir = newConfig.resolve?.alias?.['private-next-pages'] as string;
+
+      const middlewareJsPath = path.join(pagesDir, '..', 'middleware.js');
+      const middlewareTsPath = path.join(pagesDir, '..', 'middleware.ts');
+
+      const hasMiddleware = fs.existsSync(middlewareJsPath) || fs.existsSync(middlewareTsPath);
+
       newConfig.module = {
         ...newConfig.module,
         rules: [
@@ -72,6 +79,7 @@ export function constructWebpackConfigFunction(
                 loader: path.resolve(__dirname, 'loaders/prefixLoader.js'),
                 options: {
                   distDir: userNextConfig.distDir || '.next',
+                  hasMiddleware,
                 },
               },
             ],
@@ -80,8 +88,6 @@ export function constructWebpackConfigFunction(
       };
 
       if (userSentryOptions.autoInstrumentServerFunctions !== false) {
-        const pagesDir = newConfig.resolve?.alias?.['private-next-pages'] as string;
-
         // Default page extensions per https://github.com/vercel/next.js/blob/f1dbc9260d48c7995f6c52f8fbcc65f08e627992/packages/next/server/config-shared.ts#L161
         const pageExtensions = userNextConfig.pageExtensions || ['tsx', 'ts', 'jsx', 'js'];
         const pageExtensionRegex = pageExtensions.map(escapeStringForRegex).join('|');
