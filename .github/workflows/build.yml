@@ -363,7 +363,7 @@ jobs:
             ${{ github.workspace }}/packages/**/*.tgz
 
   job_unit_test:
-    name: Test (Node ${{ matrix.node }})
+    name: Unit (Node ${{ matrix.node }}) tests
     needs: [job_get_metadata, job_build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
@@ -400,7 +400,7 @@ jobs:
         uses: codecov/codecov-action@v3
 
   job_nextjs_integration_test:
-    name: Test @sentry/nextjs on (Node ${{ matrix.node }})
+    name: Nextjs (Node ${{ matrix.node }}) tests
     needs: [job_get_metadata, job_build]
     # Currently always runs because it is required for merging PRs
     timeout-minutes: 30
@@ -438,7 +438,7 @@ jobs:
   # Ember tests are separate from the rest because they are the slowest part of the test suite, and making them a
   # separate job allows them to run in parallel with the other tests.
   job_ember_tests:
-    name: Test @sentry/ember
+    name: Ember (${{ matrix.scenario }}) tests
     needs: [job_get_metadata, job_build]
     if: needs.job_get_metadata.outputs.changed_ember == 'true' || github.event_name != 'pull_request'
     timeout-minutes: 10
@@ -480,7 +480,7 @@ jobs:
         uses: codecov/codecov-action@v3
 
   job_browser_playwright_tests:
-    name: Playwright - ${{ (matrix.tracing_only && 'Browser + Tracing') || 'Browser' }} (${{ matrix.bundle }})
+    name: Playwright (${{ matrix.bundle }})${{ (matrix.tracing_only && ' tracing only') || '' }} tests
     needs: [job_get_metadata, job_build]
     if: needs.job_get_metadata.outputs.changed_browser_integration == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -532,7 +532,7 @@ jobs:
           yarn test:ci
 
   job_browser_integration_tests:
-    name: Old Browser Integration Tests (${{ matrix.browser }})
+    name: Browser (${{ matrix.browser }}) tests
     needs: [job_get_metadata, job_build]
     if: needs.job_get_metadata.outputs.changed_browser == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -605,7 +605,7 @@ jobs:
           yarn test:package
 
   job_node_integration_tests:
-    name: Node SDK Integration Tests (${{ matrix.node }})
+    name: Node (Node ${{ matrix.node }}) tests
     needs: [job_get_metadata, job_build]
     # Currently always runs because it is required for merging PRs
     runs-on: ubuntu-latest
@@ -641,7 +641,7 @@ jobs:
           yarn test
 
   job_remix_integration_tests:
-    name: Remix SDK Integration Tests (${{ matrix.node }})
+    name: Remix (Node ${{ matrix.node }}) tests
     needs: [job_get_metadata, job_build]
     if: needs.job_get_metadata.outputs.changed_remix == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
