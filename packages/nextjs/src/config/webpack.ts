@@ -57,6 +57,8 @@ export function constructWebpackConfigFunction(
       newConfig = userNextConfig.webpack(newConfig, buildContext);
     }
 
+    buildContext.distDirAbsPath = path.resolve(projectDir, userNextConfig.distDir || '.next');
+
     if (isServer) {
       newConfig.module = {
         ...newConfig.module,
@@ -71,7 +73,7 @@ export function constructWebpackConfigFunction(
                 // injecting code to attach it to `global`.
                 loader: path.resolve(__dirname, 'loaders/prefixLoader.js'),
                 options: {
-                  distDir: userNextConfig.distDir || '.next',
+                  distDirAbsPath: buildContext.distDirAbsPath,
                 },
               },
             ],
@@ -449,10 +451,8 @@ export function getWebpackPluginOptions(
   userPluginOptions: Partial<SentryWebpackPluginOptions>,
   userSentryOptions: UserSentryOptions,
 ): SentryWebpackPluginOptions {
-  const { buildId, isServer, webpack, config, dev: isDev, dir: projectDir } = buildContext;
+  const { buildId, isServer, webpack, config, distDirAbsPath, dev: isDev, dir: projectDir } = buildContext;
   const userNextConfig = config as NextConfigObject;
-
-  const distDir = userNextConfig.distDir ?? '.next'; // `.next` is the default directory
 
   const isWebpack5 = webpack.version.startsWith('5');
   const isServerless = userNextConfig.target === 'experimental-serverless-trace';
@@ -460,14 +460,14 @@ export function getWebpackPluginOptions(
   const urlPrefix = userNextConfig.basePath ? `~${userNextConfig.basePath}/_next` : '~/_next';
 
   const serverInclude = isServerless
-    ? [{ paths: [`${distDir}/serverless/`], urlPrefix: `${urlPrefix}/serverless` }]
-    : [{ paths: [`${distDir}/server/pages/`], urlPrefix: `${urlPrefix}/server/pages` }].concat(
-        isWebpack5 ? [{ paths: [`${distDir}/server/chunks/`], urlPrefix: `${urlPrefix}/server/chunks` }] : [],
+    ? [{ paths: [`${distDirAbsPath}/serverless/`], urlPrefix: `${urlPrefix}/serverless` }]
+    : [{ paths: [`${distDirAbsPath}/server/pages/`], urlPrefix: `${urlPrefix}/server/pages` }].concat(
+        isWebpack5 ? [{ paths: [`${distDirAbsPath}/server/chunks/`], urlPrefix: `${urlPrefix}/server/chunks` }] : [],
       );
 
   const clientInclude = userSentryOptions.widenClientFileUpload
-    ? [{ paths: [`${distDir}/static/chunks`], urlPrefix: `${urlPrefix}/static/chunks` }]
-    : [{ paths: [`${distDir}/static/chunks/pages`], urlPrefix: `${urlPrefix}/static/chunks/pages` }];
+    ? [{ paths: [`${distDirAbsPath}/static/chunks`], urlPrefix: `${urlPrefix}/static/chunks` }]
+    : [{ paths: [`${distDirAbsPath}/static/chunks/pages`], urlPrefix: `${urlPrefix}/static/chunks/pages` }];
 
   const defaultPluginOptions = dropUndefinedKeys({
     include: isServer ? serverInclude : clientInclude,

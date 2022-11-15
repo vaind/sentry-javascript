@@ -101,6 +101,8 @@ export type BuildContext = {
   isServer: boolean;
   buildId: string;
   dir: string;
+  // Absolute path of the output directory. Unlike other entries here, this one comes from us, not nextjs.
+  distDirAbsPath: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any;
   webpack: { version: string };
