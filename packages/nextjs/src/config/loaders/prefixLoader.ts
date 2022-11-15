@@ -4,7 +4,7 @@ import * as path from 'path';
 import { LoaderThis } from './types';
 
 type LoaderOptions = {
-  distDir: string;
+  distDirAbsPath: string;
 };
 
 /**
@@ -12,7 +12,7 @@ type LoaderOptions = {
  */
 export default function prefixLoader(this: LoaderThis<LoaderOptions>, userCode: string): string {
   // We know one or the other will be defined, depending on the version of webpack being used
-  const { distDir } = 'getOptions' in this ? this.getOptions() : this.query;
+  const { distDirAbsPath } = 'getOptions' in this ? this.getOptions() : this.query;
 
   const templatePath = path.resolve(__dirname, '../templates/prefixLoaderTemplate.js');
   // make sure the template is included when runing `webpack watch`
@@ -20,7 +20,7 @@ export default function prefixLoader(this: LoaderThis<LoaderOptions>, userCode: 
 
   // Fill in the placeholder
   let templateCode = fs.readFileSync(templatePath).toString();
-  templateCode = templateCode.replace('__DIST_DIR__', distDir.replace(/\\/g, '\\\\'));
+  templateCode = templateCode.replace('__DIST_DIR__', distDirAbsPath.replace(/\\/g, '\\\\'));
 
   return `${templateCode}\n${userCode}`;
 }
