@@ -1,7 +1,8 @@
+import * as path from 'path';
+
 import {
   BuildContext,
   EntryPropertyFunction,
-  ExportedNextConfig,
   NextConfigObject,
   NextConfigObjectWithSentry,
   WebpackConfigObject,
@@ -37,6 +38,7 @@ export const runtimePhase = 'ball-fetching';
 export const defaultsObject = { defaultConfig: {} as NextConfigObject };
 
 /** mocks of the arguments passed to `nextConfig.webpack` */
+const projectDir = '/Users/Maisey/projects/squirrelChasingSimulator';
 export const serverWebpackConfig: WebpackConfigObject = {
   entry: () =>
     Promise.resolve({
@@ -54,10 +56,10 @@ export const serverWebpackConfig: WebpackConfigObject = {
       },
       treats: './node_modules/dogTreats/treatProvider.js',
     }),
-  output: { filename: '[name].js', path: '/Users/Maisey/projects/squirrelChasingSimulator/.next' },
+  output: { filename: '[name].js', path: `${projectDir}/.next` },
   target: 'node',
-  context: '/Users/Maisey/projects/squirrelChasingSimulator',
-  resolve: { alias: { 'private-next-pages': '/Users/Maisey/projects/squirrelChasingSimulator/pages' } },
+  context: projectDir,
+  resolve: { alias: { 'private-next-pages': `${projectDir}/pages` } },
 };
 export const clientWebpackConfig: WebpackConfigObject = {
   entry: () =>
@@ -70,9 +72,9 @@ export const clientWebpackConfig: WebpackConfigObject = {
         import: ['./node_modules/dogPoints/converter.js', 'private-next-pages/simulator/leaderboard.js'],
       },
     }),
-  output: { filename: 'static/chunks/[name].js', path: '/Users/Maisey/projects/squirrelChasingSimulator/.next' },
+  output: { filename: 'static/chunks/[name].js', path: `${projectDir}/.next` },
   target: 'web',
-  context: '/Users/Maisey/projects/squirrelChasingSimulator',
+  context: projectDir,
 };
 
 /**
@@ -85,13 +87,14 @@ export const clientWebpackConfig: WebpackConfigObject = {
  */
 export function getBuildContext(
   buildTarget: 'server' | 'client',
-  materializedNextConfig: ExportedNextConfig,
+  materializedNextConfig: NextConfigObject,
   webpackVersion: string = '5.4.15',
 ): BuildContext {
   return {
     dev: false,
     buildId: 'sItStAyLiEdOwN',
-    dir: '/Users/Maisey/projects/squirrelChasingSimulator',
+    dir: projectDir,
+    distDirAbsPath: path.resolve(projectDir, materializedNextConfig.distDir || '.next'),
     config: {
       // nextjs's default values
       target: 'server',
