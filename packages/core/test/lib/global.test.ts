@@ -2,7 +2,7 @@
 
 import { GLOBAL_OBJ } from '@sentry/utils';
 
-import { getCurrentHub, getHubFromCarrier, Hub } from '../src';
+import { getCurrentHub, getHubFromCarrier, Hub } from '../../src';
 
 describe('global', () => {
   test('getGlobalHub', () => {

@@ -15,7 +15,7 @@ import {
   setTags,
   setUser,
   withScope,
-} from '../src';
+} from '../../src';
 
 export class TestClient {
   public static instance?: TestClient;
