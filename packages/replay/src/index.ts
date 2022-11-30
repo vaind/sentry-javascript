@@ -1388,3 +1388,5 @@ export class Replay implements Integration {
     client.recordDroppedEvent = this._originalRecordDroppedEvent;
   }
 }
+
+// JUST A TEST COMMENT TO CHANGE THE FILE!!
