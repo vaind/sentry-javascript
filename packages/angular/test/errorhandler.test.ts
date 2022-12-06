@@ -46,7 +46,14 @@ describe('SentryErrorHandler', () => {
 
     expect(addEventProcessorSpy).toBeCalledTimes(1);
     expect(addExceptionMechanismSpy).toBeCalledTimes(1);
-    expect(addExceptionMechanismSpy).toBeCalledWith({}, { handled: false, type: 'angular' });
+    expect(addExceptionMechanismSpy).toBeCalledWith(
+      {},
+      {
+        handled: false,
+        type: 'angular',
+        other: { caughtByUser: false },
+      },
+    );
   });
 
   it('handleError method extracts `null` error', () => {

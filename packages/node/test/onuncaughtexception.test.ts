@@ -28,7 +28,7 @@ describe('uncaught exceptions', () => {
     integration.handler({ message: 'message', name: 'name' });
 
     expect(captureException.mock.calls[0][1]?.data).toEqual({
-      mechanism: { handled: false, type: 'onuncaughtexception' },
+      mechanism: { handled: false, type: 'onuncaughtexception', other: { caughtByUser: false } },
     });
   });
 });

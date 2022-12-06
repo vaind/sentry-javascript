@@ -3,7 +3,14 @@ import childProcess from 'child_process';
 import os from 'os';
 
 // This variable will act as a job queue that is consumed by a number of worker threads. Each item represents a test to run.
-const testPaths = childProcess.execSync('jest --listTests', { encoding: 'utf8' }).trim().split('\n');
+let testPaths = childProcess.execSync('jest --listTests', { encoding: 'utf8' }).trim().split('\n');
+
+if (process.env.SKIP_DOCKER) {
+  testPaths = testPaths.filter(_test => true);
+  console.log('Skipping tests which require Docker.');
+} else {
+  childProcess.execSync('yarn prisma:init');
+}
 
 const numTests = testPaths.length;
 const fails: string[] = [];

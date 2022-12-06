@@ -16,7 +16,6 @@
     "fix:eslint": "eslint . --format stylish --fix",
     "fix:prettier": "prettier --write \"{suites,utils}/**/*.ts\"",
     "type-check": "tsc",
-    "pretest": "run-s --silent prisma:init",
     "test": "ts-node ./utils/run-tests.ts",
     "test:watch": "yarn test --watch"
   },

@@ -42,7 +42,7 @@ describe('unhandled promises', () => {
     integration.sendUnhandledPromise('bla', promise);
 
     expect(captureException.mock.calls[0][1]?.data).toEqual({
-      mechanism: { handled: false, type: 'onunhandledrejection' },
+      mechanism: { handled: false, type: 'onunhandledrejection', other: { caughtByUser: false } },
     });
     expect(captureException.mock.calls[0][0]).toBe('bla');
   });
