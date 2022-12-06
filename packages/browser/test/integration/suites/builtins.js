@@ -186,6 +186,7 @@ describe('wrapped built-ins', function () {
           data: {
             function: 'onreadystatechange',
           },
+          other: { caughtByUser: false },
         });
       }
     });
@@ -238,6 +239,7 @@ describe('wrapped built-ins', function () {
         assert.deepEqual(summary.events[0].exception.values[0].mechanism, {
           type: 'instrument',
           handled: true,
+          other: { caughtByUser: false },
         });
       }
     });
@@ -281,6 +283,7 @@ describe('wrapped built-ins', function () {
           data: {
             function: 'addEventListener',
           },
+          other: { caughtByUser: false },
         });
       }
     });
@@ -318,6 +321,7 @@ describe('wrapped built-ins', function () {
               function: 'addEventListener',
               handler: '<anonymous>',
             },
+            other: { caughtByUser: false },
           });
         }
       });
