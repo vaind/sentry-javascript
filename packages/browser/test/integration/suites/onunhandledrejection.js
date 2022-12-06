@@ -16,6 +16,7 @@ describe('window.onunhandledrejection', function () {
           assert.isAtLeast(summary.events[0].exception.values[0].stacktrace.frames.length, 1);
         }
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -55,6 +56,7 @@ describe('window.onunhandledrejection', function () {
           assert.isAtLeast(summary.events[0].exception.values[0].stacktrace.frames.length, 1);
         }
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
         // even though it's a regular Event (rather than a PRE) it should still only
         // come through this channel
@@ -81,6 +83,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'Event');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
         // even though it's a regular Event (rather than a PRE) it should sill only
         // come through this channel
@@ -105,6 +108,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -127,6 +131,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -148,6 +153,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -176,6 +182,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -197,6 +204,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -218,6 +226,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
@@ -239,6 +248,7 @@ describe('window.onunhandledrejection', function () {
         );
         assert.equal(summary.events[0].exception.values[0].type, 'UnhandledRejection');
         assert.equal(summary.events[0].exception.values[0].mechanism.handled, false);
+        assert.equal(summary.events[0].exception.values[0].mechanism.other.caughtByUser, false);
         assert.equal(summary.events[0].exception.values[0].mechanism.type, 'onunhandledrejection');
       }
     });
