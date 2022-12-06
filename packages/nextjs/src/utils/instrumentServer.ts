@@ -178,6 +178,7 @@ function makeWrappedErrorLogger(origErrorLogger: ErrorLogger): WrappedErrorLogge
           data: {
             function: 'logError',
           },
+          other: { caughtByUser: false },
         });
         return event;
       });

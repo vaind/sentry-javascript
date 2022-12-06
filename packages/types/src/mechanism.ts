@@ -29,4 +29,10 @@ export interface Mechanism {
    * to recreate the stacktrace.
    */
   synthetic?: boolean;
+
+  // Arbitrary data. Like `data`, except that it doesn't show up in the UI.
+  other?: {
+    [key: string]: unknown;
+    caughtByUser?: boolean;
+  };
 }

@@ -49,6 +49,7 @@ export async function captureUnderscoreErrorException(contextOrProps: ContextOrP
         data: {
           function: '_error.getInitialProps',
         },
+        other: { caughtByUser: false },
       });
       return event;
     });

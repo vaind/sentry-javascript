@@ -126,7 +126,7 @@ export class OnUncaughtException implements Integration {
             scope.setLevel('fatal');
             hub.captureException(error, {
               originalException: error,
-              data: { mechanism: { handled: false, type: 'onuncaughtexception' } },
+              data: { mechanism: { handled: false, type: 'onuncaughtexception', other: { caughtByUser: false } } },
             });
             if (!calledFatalError && shouldApplyFatalHandlingLogic) {
               calledFatalError = true;

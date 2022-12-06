@@ -114,6 +114,7 @@ function _wrapTimeFunction(original: () => void): () => number {
         data: { function: getFunctionName(original) },
         handled: true,
         type: 'instrument',
+        other: { caughtByUser: false },
       },
     });
     return original.apply(this, args);
@@ -135,6 +136,7 @@ function _wrapRAF(original: any): (callback: () => void) => any {
           },
           handled: true,
           type: 'instrument',
+          other: { caughtByUser: false },
         },
       }),
     ]);
@@ -161,6 +163,7 @@ function _wrapXHR(originalSend: () => void): () => void {
               },
               handled: true,
               type: 'instrument',
+              other: { caughtByUser: false },
             },
           };
 
@@ -221,6 +224,7 @@ function _wrapEventTarget(target: string): void {
               },
               handled: true,
               type: 'instrument',
+              other: { caughtByUser: false },
             },
           });
         }
@@ -240,6 +244,7 @@ function _wrapEventTarget(target: string): void {
             },
             handled: true,
             type: 'instrument',
+            other: { caughtByUser: false },
           },
         }),
         options,
