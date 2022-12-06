@@ -30,6 +30,9 @@ export interface Mechanism {
    */
   synthetic?: boolean;
 
+  // TODO: Theoretically relay should accept this, but it's not coming through. For the moment, it's getting moved to
+  // `debug_meta` during envelope processing
+  //
   // Arbitrary data. Like `data`, except that it doesn't show up in the UI.
   other?: {
     [key: string]: unknown;

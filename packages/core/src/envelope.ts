@@ -80,6 +80,9 @@ export function createEventEnvelope(
   // of this `delete`, lest we miss putting it back in the next time the property is in use.)
   delete event.sdkProcessingMetadata;
 
+  // TODO: Get rid of this once it's clear how to make `other` be accepted by relay
+  event.debug_meta = { ...event.debug_meta, caughtByUser: event.exception?.values?.[0].mechanism?.other?.caughtByUser };
+
   const eventItem: EventItem = [{ type: eventType }, event];
   return createEnvelope<EventEnvelope>(envelopeHeaders, [eventItem]);
 }

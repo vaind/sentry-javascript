@@ -3,6 +3,8 @@
  **/
 export interface DebugMeta {
   images?: Array<DebugImage>;
+  // Temporary home for corrent 'mechanism.handled` value, until relay will accept another field
+  caughtByUser?: boolean;
 }
 
 /**
