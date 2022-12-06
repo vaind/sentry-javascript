@@ -27,6 +27,7 @@ export function Error(obj?: Event): any {
             data: {
               function: 'setTimeout',
             },
+            other: { caughtByUser: false },
           },
         },
       ],
