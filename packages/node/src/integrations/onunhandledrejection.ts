@@ -51,7 +51,7 @@ export class OnUnhandledRejection implements Integration {
         scope.setExtra('unhandledPromiseRejection', true);
         hub.captureException(reason, {
           originalException: promise,
-          data: { mechanism: { handled: false, type: 'onunhandledrejection' } },
+          data: { mechanism: { handled: false, type: 'onunhandledrejection', other: { caughtByUser: false } } },
         });
       });
     }

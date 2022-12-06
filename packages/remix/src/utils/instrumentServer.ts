@@ -123,6 +123,7 @@ async function captureRemixServerException(err: Error, name: string, request: Re
         data: {
           function: name,
         },
+        other: { caughtByUser: false },
       });
 
       return event;

@@ -166,6 +166,7 @@ export function withSentry(origHandler: NextApiHandler, parameterizedRoute?: str
                 wrapped_handler: origHandler.name,
                 function: 'withSentry',
               },
+              other: { caughtByUser: false },
             });
             return event;
           });

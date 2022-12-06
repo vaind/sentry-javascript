@@ -244,6 +244,7 @@ function addMechanismAndCapture(hub: Hub, error: EventHint['originalException'],
   addExceptionMechanism(event, {
     handled: false,
     type,
+    other: { caughtByUser: false },
   });
   hub.captureEvent(event, {
     originalException: error,

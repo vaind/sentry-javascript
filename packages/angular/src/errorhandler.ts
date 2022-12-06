@@ -48,6 +48,7 @@ class SentryErrorHandler implements AngularErrorHandler {
           addExceptionMechanism(event, {
             type: 'angular',
             handled: false,
+            other: { caughtByUser: false },
           });
 
           return event;
