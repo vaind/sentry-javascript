@@ -10,10 +10,7 @@ import { addInternalBreadcrumb } from '../util/addInternalBreadcrumb';
 export function handleGlobalEventListener(replay: ReplayContainer): (event: Event) => Event {
   return (event: Event) => {
     // Do not apply replayId to the root event
-    if (
-      // @ts-ignore new event type
-      event.type === REPLAY_EVENT_NAME
-    ) {
+    if (event.type === REPLAY_EVENT_NAME) {
       // Replays have separate set of breadcrumbs, do not include breadcrumbs
       // from core SDK
       delete event.breadcrumbs;
@@ -22,7 +19,7 @@ export function handleGlobalEventListener(replay: ReplayContainer): (event: Even
 
     // Only tag transactions with replayId if not waiting for an error
     // @ts-ignore private
-    if (event.type !== 'transaction' || !replay._waitForError) {
+    if (!event.type || !replay._waitForError) {
       event.tags = { ...event.tags, replayId: replay.session?.id };
     }
 
