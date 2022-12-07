@@ -211,7 +211,7 @@ describe('addExceptionMechanism', () => {
   it('prefers current values to defaults', () => {
     const event = { ...baseEvent };
 
-    const nonDefaultMechanism = { type: 'instrument', handled: false };
+    const nonDefaultMechanism = { type: 'instrument', handled: false, other: { caughtByUser: false } };
     event.exception.values[0].mechanism = nonDefaultMechanism;
 
     addExceptionMechanism(event);
@@ -222,14 +222,19 @@ describe('addExceptionMechanism', () => {
   it('prefers incoming values to current values', () => {
     const event = { ...baseEvent };
 
-    const currentMechanism = { type: 'instrument', handled: false };
+    const currentMechanism = { type: 'instrument', handled: false, other: { caughtByUser: false } };
     const newMechanism = { handled: true, synthetic: true };
     event.exception.values[0].mechanism = currentMechanism;
 
     addExceptionMechanism(event, newMechanism);
 
     // the new `handled` value took precedence
-    expect(event.exception.values[0].mechanism).toEqual({ type: 'instrument', handled: true, synthetic: true });
+    expect(event.exception.values[0].mechanism).toEqual({
+      type: 'instrument',
+      handled: true,
+      synthetic: true,
+      other: { caughtByUser: false },
+    });
   });
 
   it('merges data values', () => {

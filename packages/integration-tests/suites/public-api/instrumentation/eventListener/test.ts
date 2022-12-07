@@ -18,6 +18,7 @@ sentryTest(
       mechanism: {
         type: 'instrument',
         handled: true,
+        other: { caughtByUser: false },
       },
       stacktrace: {
         frames: expect.any(Array),
