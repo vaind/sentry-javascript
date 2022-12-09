@@ -68,7 +68,10 @@ export function createEventEnvelope(
   tunnel?: string,
 ): EventEnvelope {
   const sdkInfo = getSdkMetadataForEnvelopeHeader(metadata);
-  const eventType = event.type || 'event';
+
+  // TODO: Handle replay_event here
+  // Currently, this is done by replay, but we want to upstream this here
+  const eventType = event.type && event.type !== 'replay_event' ? event.type : 'event';
 
   enhanceEventWithSdkInfo(event, metadata && metadata.sdk);
 
