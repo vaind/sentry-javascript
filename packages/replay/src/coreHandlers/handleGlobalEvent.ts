@@ -1,7 +1,6 @@
 import { addBreadcrumb } from '@sentry/core';
 import { Event } from '@sentry/types';
 
-import { REPLAY_EVENT_NAME, UNABLE_TO_SEND_REPLAY } from '../constants';
 import type { ReplayContainer } from '../types';
 
 /**
@@ -9,17 +8,6 @@ import type { ReplayContainer } from '../types';
  */
 export function handleGlobalEventListener(replay: ReplayContainer): (event: Event) => Event {
   return (event: Event) => {
-    // Do not apply replayId to the root event
-    if (
-      // @ts-ignore new event type
-      event.type === REPLAY_EVENT_NAME
-    ) {
-      // Replays have separate set of breadcrumbs, do not include breadcrumbs
-      // from core SDK
-      delete event.breadcrumbs;
-      return event;
-    }
-
     // Only tag transactions with replayId if not waiting for an error
     // @ts-ignore private
     if (event.type !== 'transaction' || replay.recordingMode === 'session') {
@@ -48,11 +36,7 @@ export function handleGlobalEventListener(replay: ReplayContainer): (event: Even
     }
 
     // Need to be very careful that this does not cause an infinite loop
-    if (
-      replay.recordingMode === 'error' &&
-      event.exception &&
-      event.message !== UNABLE_TO_SEND_REPLAY // ignore this error because otherwise we could loop indefinitely with trying to capture replay and failing
-    ) {
+    if (replay.recordingMode === 'error' && event.exception) {
       setTimeout(async () => {
         // Allow flush to complete before resuming as a session recording, otherwise
         // the checkout from `startRecording` may be included in the payload.

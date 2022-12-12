@@ -8,9 +8,12 @@ import {
   Event,
   EventDropReason,
   EventHint,
+  EventInterface,
   Integration,
   IntegrationClass,
   Outcome,
+  ReplayEvent,
+  ReplayRecordingData,
   Session,
   SessionAggregates,
   Severity,
@@ -37,7 +40,7 @@ import {
 } from '@sentry/utils';
 
 import { getEnvelopeEndpointWithUrlEncodedAuth } from './api';
-import { createEventEnvelope, createSessionEnvelope } from './envelope';
+import { createEventEnvelope, createReplayEnvelope, createSessionEnvelope } from './envelope';
 import { IntegrationIndex, setupIntegrations } from './integration';
 import { Scope } from './scope';
 import { updateSession } from './session';
@@ -191,6 +194,13 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
   /**
    * @inheritDoc
    */
+  public captureReplay(event: ReplayEvent, recordingData: ReplayRecordingData, scope?: Scope): void {
+    this._process(this._captureReplay(event, recordingData, scope));
+  }
+
+  /**
+   * @inheritDoc
+   */
   public captureSession(session: Session): void {
     if (!this._isEnabled()) {
       __DEBUG_BUILD__ && logger.warn('SDK not enabled, will not capture session.');
@@ -335,7 +345,7 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
   }
 
   /** Updates existing session based on the provided event */
-  protected _updateSessionFromEvent(session: Session, event: Event): void {
+  protected _updateSessionFromEvent(session: Session, event: EventInterface): void {
     let crashed = false;
     let errored = false;
     const exceptions = event.exception && event.exception.values;
@@ -416,9 +426,9 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
    * @param scope A scope containing event metadata.
    * @returns A new event with more information.
    */
-  protected _prepareEvent(event: Event, hint: EventHint, scope?: Scope): PromiseLike<Event | null> {
+  protected _prepareEvent<T extends EventInterface>(event: T, hint: EventHint, scope?: Scope): PromiseLike<T | null> {
     const { normalizeDepth = 3, normalizeMaxBreadth = 1_000 } = this.getOptions();
-    const prepared: Event = {
+    const prepared: T = {
       ...event,
       event_id: event.event_id || hint.event_id || uuid4(),
       timestamp: event.timestamp || dateTimestampInSeconds(),
@@ -434,11 +444,6 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
       finalScope = Scope.clone(finalScope).update(hint.captureContext);
     }
 
-    // We prepare the result here with a resolved Event.
-    let result = resolvedSyncPromise<Event | null>(prepared);
-
-    // This should be the last thing called, since we want that
-    // {@link Hub.addEventProcessor} gets the finished prepared event.
     //
     // We need to check for the existence of `finalScope.getAttachments`
     // because `getAttachments` can be undefined if users are using an older version
@@ -451,12 +456,11 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
       if (attachments.length) {
         hint.attachments = attachments;
       }
-
-      // In case we have a hub we reassign it.
-      result = finalScope.applyToEvent(prepared, hint);
     }
 
-    return result.then(evt => {
+    // This should be the last thing called, since we want that
+    // {@link Hub.addEventProcessor} gets the finished prepared event.
+    return this._applyFinalScopeToEvent(event, hint, finalScope).then(evt => {
       if (typeof normalizeDepth === 'number' && normalizeDepth > 0) {
         return this._normalizeEvent(evt, normalizeDepth, normalizeMaxBreadth);
       }
@@ -474,12 +478,12 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
    * @param event Event
    * @returns Normalized event
    */
-  protected _normalizeEvent(event: Event | null, depth: number, maxBreadth: number): Event | null {
+  protected _normalizeEvent<T extends EventInterface>(event: T | null, depth: number, maxBreadth: number): T | null {
     if (!event) {
       return null;
     }
 
-    const normalized: Event = {
+    const normalized: T = {
       ...event,
       ...(event.breadcrumbs && {
         breadcrumbs: event.breadcrumbs.map(b => ({
@@ -530,13 +534,31 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
     return normalized;
   }
 
+  /** Apply data from final scope to event, if applicable. */
+  protected _applyFinalScopeToEvent<T extends EventInterface>(
+    event: T,
+    hint: EventHint,
+    finalScope?: Scope,
+  ): PromiseLike<T | null> {
+    if (!finalScope) {
+      return resolvedSyncPromise(event);
+    }
+
+    if (isEvent(event)) {
+      return finalScope.applyToEvent(event, hint) as PromiseLike<T | null>;
+    }
+
+    finalScope.applyScopeDataToEvent(event);
+    return resolvedSyncPromise(event);
+  }
+
   /**
    *  Enhances event using the client configuration.
    *  It takes care of all "static" values like environment, release and `dist`,
    *  as well as truncating overly long values.
    * @param event event instance to be enhanced
    */
-  protected _applyClientOptions(event: Event): void {
+  protected _applyClientOptions(event: EventInterface): void {
     const options = this.getOptions();
     const { environment, release, dist, maxValueLength = 250 } = options;
 
@@ -571,7 +593,7 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
    * This function adds all used integrations to the SDK info in the event.
    * @param event The event that will be filled with all integrations.
    */
-  protected _applyIntegrationsMetadata(event: Event): void {
+  protected _applyIntegrationsMetadata(event: EventInterface): void {
     const integrationsArray = Object.keys(this._integrations);
     if (integrationsArray.length > 0) {
       event.sdk = event.sdk || {};
@@ -741,6 +763,30 @@ export abstract class BaseClient<O extends ClientOptions> implements Client<O> {
     }
   }
 
+  /** Capture a replay event. */
+  protected _captureReplay(event: ReplayEvent, recordingData: ReplayRecordingData, scope?: Scope): PromiseLike<void> {
+    return this._prepareEvent(event, {}, scope).then(processedEvent => {
+      if (!processedEvent) {
+        return;
+      }
+
+      const session = scope && scope.getSession();
+      if (session) {
+        this._updateSessionFromEvent(session, processedEvent);
+      }
+
+      this._sendReplay(event, recordingData);
+    });
+  }
+
+  /** Send a replay event envelope. */
+  protected _sendReplay(event: ReplayEvent, recordingData: ReplayRecordingData): void {
+    if (this._dsn) {
+      const env = createReplayEnvelope(event, recordingData, this._dsn, this._options._metadata, this._options.tunnel);
+      this._sendEnvelope(env);
+    }
+  }
+
   /**
    * Clears outcomes on this client and returns them.
    */
@@ -798,4 +844,11 @@ function _validateBeforeSendResult(
     throw new SentryError(invalidValueError);
   }
   return beforeSendResult;
+}
+
+/** If the event interface is an actual "Event" type */
+function isEvent(event: EventInterface): event is Event {
+  const type = (event as Event).type;
+
+  return !type || type === 'transaction' || type === 'profile';
 }

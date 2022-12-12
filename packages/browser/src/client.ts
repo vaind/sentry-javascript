@@ -1,5 +1,5 @@
 import { BaseClient, getEnvelopeEndpointWithUrlEncodedAuth, Scope, SDK_VERSION } from '@sentry/core';
-import { ClientOptions, Event, EventHint, Options, Severity, SeverityLevel } from '@sentry/types';
+import { ClientOptions, Event, EventHint, EventInterface, Options, Severity, SeverityLevel } from '@sentry/types';
 import { createClientReportEnvelope, dsnToString, logger, serializeEnvelope } from '@sentry/utils';
 
 import { eventFromException, eventFromMessage } from './eventbuilder';
@@ -111,7 +111,7 @@ export class BrowserClient extends BaseClient<BrowserClientOptions> {
   /**
    * @inheritDoc
    */
-  protected _prepareEvent(event: Event, hint: EventHint, scope?: Scope): PromiseLike<Event | null> {
+  protected _prepareEvent<T extends EventInterface>(event: T, hint: EventHint, scope?: Scope): PromiseLike<T | null> {
     event.platform = event.platform || 'javascript';
     return super._prepareEvent(event, hint, scope);
   }

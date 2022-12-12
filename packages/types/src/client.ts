@@ -4,6 +4,7 @@ import { DsnComponents } from './dsn';
 import { Event, EventHint } from './event';
 import { Integration, IntegrationClass } from './integration';
 import { ClientOptions } from './options';
+import { ReplayEvent, ReplayRecordingData } from './replay';
 import { Scope } from './scope';
 import { Session, SessionAggregates } from './session';
 import { Severity, SeverityLevel } from './severity';
@@ -62,6 +63,15 @@ export interface Client<O extends ClientOptions = ClientOptions> {
    * @param session Session to be delivered
    */
   captureSession?(session: Session): void;
+
+  /**
+   * Captures a replay.
+   *
+   * @param event Replay event data to be delivered
+   * @param recordingData Replay recording data to be delivered
+   * @param scope An optional scope containing event metadata.
+   */
+  captureReplay?(event: ReplayEvent, recordingData: ReplayRecordingData, scope?: Scope): void;
 
   /** Returns the current Dsn. */
   getDsn(): DsnComponents | undefined;

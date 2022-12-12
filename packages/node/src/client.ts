@@ -1,5 +1,5 @@
 import { BaseClient, Scope, SDK_VERSION, SessionFlusher } from '@sentry/core';
-import { Event, EventHint, Severity, SeverityLevel } from '@sentry/types';
+import { Event, EventHint, EventInterface, Severity, SeverityLevel } from '@sentry/types';
 import { logger, resolvedSyncPromise } from '@sentry/utils';
 import * as os from 'os';
 import { TextEncoder } from 'util';
@@ -137,7 +137,7 @@ export class NodeClient extends BaseClient<NodeClientOptions> {
   /**
    * @inheritDoc
    */
-  protected _prepareEvent(event: Event, hint: EventHint, scope?: Scope): PromiseLike<Event | null> {
+  protected _prepareEvent<T extends EventInterface>(event: T, hint: EventHint, scope?: Scope): PromiseLike<T | null> {
     event.platform = event.platform || 'node';
     event.contexts = {
       ...event.contexts,

@@ -1,18 +1,11 @@
 /* eslint-disable max-lines */ // TODO: We might want to split this file up
-import { addGlobalEventProcessor, captureException, getCurrentHub, setContext } from '@sentry/core';
-import { Breadcrumb, Event } from '@sentry/types';
+import { addGlobalEventProcessor, captureException, getCurrentHub } from '@sentry/core';
+import { Breadcrumb, ReplayEvent } from '@sentry/types';
 import { addInstrumentationHandler, logger } from '@sentry/utils';
 import debounce from 'lodash.debounce';
 import { EventType, record } from 'rrweb';
 
-import {
-  MAX_SESSION_LIFE,
-  REPLAY_EVENT_NAME,
-  SESSION_IDLE_DURATION,
-  UNABLE_TO_SEND_REPLAY,
-  VISIBILITY_CHANGE_TIMEOUT,
-  WINDOW,
-} from './constants';
+import { MAX_SESSION_LIFE, SESSION_IDLE_DURATION, VISIBILITY_CHANGE_TIMEOUT, WINDOW } from './constants';
 import { breadcrumbHandler } from './coreHandlers/breadcrumbHandler';
 import { handleFetchSpanListener } from './coreHandlers/handleFetch';
 import { handleGlobalEventListener } from './coreHandlers/handleGlobalEvent';
@@ -44,8 +37,6 @@ import { addMemoryEntry } from './util/addMemoryEntry';
 import { createBreadcrumb } from './util/createBreadcrumb';
 import { createPayload } from './util/createPayload';
 import { createPerformanceSpans } from './util/createPerformanceSpans';
-import { createReplayEnvelope } from './util/createReplayEnvelope';
-import { getReplayEvent } from './util/getReplayEvent';
 import { isExpired } from './util/isExpired';
 import { isSessionExpired } from './util/isSessionExpired';
 import { overwriteRecordDroppedEvent, restoreRecordDroppedEvent } from './util/monkeyPatchRecordDroppedEvent';
@@ -53,9 +44,6 @@ import { overwriteRecordDroppedEvent, restoreRecordDroppedEvent } from './util/m
 /**
  * Returns true to return control to calling function, otherwise continue with normal batching
  */
-
-const BASE_RETRY_INTERVAL = 5000;
-const MAX_RETRY_COUNT = 3;
 
 export class ReplayContainer implements ReplayContainerInterface {
   public eventBuffer: EventBuffer | null = null;
@@ -82,9 +70,6 @@ export class ReplayContainer implements ReplayContainerInterface {
   private readonly _options: ReplayPluginOptions;
 
   private _performanceObserver: PerformanceObserver | null = null;
-
-  private _retryCount: number = 0;
-  private _retryInterval: number = BASE_RETRY_INTERVAL;
 
   private _debouncedFlush: ReturnType<typeof debounce>;
   private _flushLock: Promise<unknown> | null = null;
@@ -906,14 +891,8 @@ export class ReplayContainer implements ReplayContainerInterface {
   /**
    * Send replay attachment using `fetch()`
    */
-  async sendReplayRequest({
-    events,
-    replayId,
-    segmentId: segment_id,
-    includeReplayStartTimestamp,
-    eventContext,
-  }: SendReplay): Promise<void | undefined> {
-    const payloadWithSequence = createPayload({
+  sendReplay({ events, replayId, segmentId: segment_id, includeReplayStartTimestamp, eventContext }: SendReplay): void {
+    const recordingData = createPayload({
       events,
       headers: {
         segment_id,
@@ -928,31 +907,30 @@ export class ReplayContainer implements ReplayContainerInterface {
     const client = hub.getClient();
     const scope = hub.getScope();
     const transport = client && client.getTransport();
+    const session = this.session;
 
-    if (!client || !scope || !transport) {
+    if (!client || !scope || !transport || !client.captureReplay || !session) {
       return;
     }
 
-    const baseEvent: Event = {
-      // @ts-ignore private api
-      type: REPLAY_EVENT_NAME,
+    const replayEvent: ReplayEvent = {
+      type: 'replay_event',
       ...(includeReplayStartTimestamp ? { replay_start_timestamp: initialTimestamp / 1000 } : {}),
       timestamp: currentTimestamp / 1000,
       error_ids: errorIds,
       trace_ids: traceIds,
       urls,
       replay_id: replayId,
+      event_id: replayId,
       segment_id,
+      tags: {
+        sessionSampleRate: this._options.sessionSampleRate,
+        errorSampleRate: this._options.errorSampleRate,
+        replayType: session.sampled,
+      },
     };
 
-    const replayEvent = await getReplayEvent({ scope, client, replayId, event: baseEvent });
-
-    replayEvent.tags = {
-      ...replayEvent.tags,
-      sessionSampleRate: this._options.sessionSampleRate,
-      errorSampleRate: this._options.errorSampleRate,
-      replayType: this.session?.sampled,
-    };
+    client.captureReplay(replayEvent, recordingData, scope);
 
     /*
     For reference, the fully built event looks something like this:
@@ -989,80 +967,6 @@ export class ReplayContainer implements ReplayContainerInterface {
         }
     }
     */
-
-    const envelope = createReplayEnvelope(replayId, replayEvent, payloadWithSequence);
-
-    try {
-      return transport.send(envelope);
-    } catch {
-      throw new Error(UNABLE_TO_SEND_REPLAY);
-    }
-  }
-
-  resetRetries(): void {
-    this._retryCount = 0;
-    this._retryInterval = BASE_RETRY_INTERVAL;
-  }
-
-  /**
-   * Finalize and send the current replay event to Sentry
-   */
-  async sendReplay({
-    replayId,
-    events,
-    segmentId,
-    includeReplayStartTimestamp,
-    eventContext,
-  }: SendReplay): Promise<unknown> {
-    // short circuit if there's no events to upload (this shouldn't happen as runFlush makes this check)
-    if (!events.length) {
-      return;
-    }
-
-    try {
-      await this.sendReplayRequest({
-        events,
-        replayId,
-        segmentId,
-        includeReplayStartTimestamp,
-        eventContext,
-      });
-      this.resetRetries();
-      return true;
-    } catch (err) {
-      // Capture error for every failed replay
-      setContext('Replays', {
-        _retryCount: this._retryCount,
-      });
-      this.handleException(err);
-
-      // If an error happened here, it's likely that uploading the attachment
-      // failed, we'll can retry with the same events payload
-      if (this._retryCount >= MAX_RETRY_COUNT) {
-        throw new Error(`${UNABLE_TO_SEND_REPLAY} - max retries exceeded`);
-      }
-
-      this._retryCount = this._retryCount + 1;
-      // will retry in intervals of 5, 10, 30
-      this._retryInterval = this._retryCount * this._retryInterval;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(async () => {
-          try {
-            await this.sendReplay({
-              replayId,
-              events,
-              segmentId,
-              includeReplayStartTimestamp,
-              eventContext,
-            });
-            resolve(true);
-          } catch (err) {
-            reject(err);
-          }
-        }, this._retryInterval);
-      });
-    }
   }
 
   /** Save the session, if it is sticky */

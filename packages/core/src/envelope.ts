@@ -4,6 +4,9 @@ import {
   EventEnvelope,
   EventEnvelopeHeaders,
   EventItem,
+  ReplayEnvelope,
+  ReplayEvent,
+  ReplayRecordingData,
   SdkInfo,
   SdkMetadata,
   Session,
@@ -56,6 +59,33 @@ export function createSessionEnvelope(
     'aggregates' in session ? [{ type: 'sessions' }, session] : [{ type: 'session' }, session];
 
   return createEnvelope<SessionEnvelope>(envelopeHeaders, [envelopeItem]);
+}
+
+/** Create am envelope from a replay */
+export function createReplayEnvelope(
+  replayEvent: ReplayEvent,
+  replayRecordingData: ReplayRecordingData,
+  dsn: DsnComponents,
+  metadata?: SdkMetadata,
+  tunnel?: string,
+): ReplayEnvelope {
+  const sdkInfo = getSdkMetadataForEnvelopeHeader(metadata);
+  const envelopeHeaders = {
+    sent_at: new Date().toISOString(),
+    ...(sdkInfo && { sdk: sdkInfo }),
+    ...(!!tunnel && { dsn: dsnToString(dsn) }),
+  };
+
+  return createEnvelope<ReplayEnvelope>(envelopeHeaders, [
+    [{ type: 'replay_event' }, replayEvent],
+    [
+      {
+        type: 'replay_recording',
+        length: replayRecordingData.length,
+      },
+      replayRecordingData,
+    ],
+  ]);
 }
 
 /**

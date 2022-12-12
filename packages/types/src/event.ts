@@ -14,8 +14,10 @@ import { Span } from './span';
 import { TransactionNameChange, TransactionSource } from './transaction';
 import { User } from './user';
 
-/** JSDoc */
-export interface Event {
+/**
+ * A generic event interface, without a type.
+ */
+export interface EventInterface {
   event_id?: string;
   message?: string;
   timestamp?: number;
@@ -41,7 +43,6 @@ export interface Event {
   tags?: { [key: string]: Primitive };
   extra?: Extras;
   user?: User;
-  type?: EventType;
   spans?: Span[];
   measurements?: Measurements;
   debug_meta?: DebugMeta;
@@ -52,6 +53,14 @@ export interface Event {
     changes: TransactionNameChange[];
     propagations: number;
   };
+}
+
+/**
+ * An event of one of the types:
+ * error, transaction, profile
+ */
+export interface Event extends EventInterface {
+  type?: EventType;
 }
 
 /** JSDoc */

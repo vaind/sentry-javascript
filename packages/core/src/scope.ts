@@ -7,6 +7,7 @@ import {
   Contexts,
   Event,
   EventHint,
+  EventInterface,
   EventProcessor,
   Extra,
   Extras,
@@ -451,13 +452,12 @@ export class Scope implements ScopeInterface {
   }
 
   /**
-   * Applies data from the scope to the event and runs all event processors on it.
+   * Applies data from the scope to the event.
    *
    * @param event Event
-   * @param hint Object containing additional information about the original exception, for use by the event processors.
    * @hidden
    */
-  public applyToEvent(event: Event, hint: EventHint = {}): PromiseLike<Event | null> {
+  public applyScopeDataToEvent(event: EventInterface): void {
     if (this._extra && Object.keys(this._extra).length) {
       event.extra = { ...this._extra, ...event.extra };
     }
@@ -494,6 +494,17 @@ export class Scope implements ScopeInterface {
     event.breadcrumbs = event.breadcrumbs.length > 0 ? event.breadcrumbs : undefined;
 
     event.sdkProcessingMetadata = { ...event.sdkProcessingMetadata, ...this._sdkProcessingMetadata };
+  }
+
+  /**
+   * Applies data from the scope to the event and runs all event processors on it.
+   *
+   * @param event Event
+   * @param hint Object containing additional information about the original exception, for use by the event processors.
+   * @hidden
+   */
+  public applyToEvent(event: Event, hint: EventHint = {}): PromiseLike<Event | null> {
+    this.applyScopeDataToEvent(event);
 
     return this._notifyEventProcessors([...getGlobalEventProcessors(), ...this._eventProcessors], event, hint);
   }
@@ -561,7 +572,7 @@ export class Scope implements ScopeInterface {
    * Applies fingerprint from the scope to the event if there's one,
    * uses message if there's one instead or get rid of empty fingerprint
    */
-  private _applyFingerprint(event: Event): void {
+  private _applyFingerprint(event: EventInterface): void {
     // Make sure it's an array first and we actually have something in place
     event.fingerprint = event.fingerprint ? arrayify(event.fingerprint) : [];
 

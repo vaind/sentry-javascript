@@ -22,9 +22,11 @@ export type {
   SessionEnvelope,
   SessionItem,
   UserFeedbackItem,
+  ReplayEnvelope,
 } from './envelope';
 export type { ExtendedError } from './error';
-export type { Event, EventHint } from './event';
+export type { Event, EventInterface, EventHint } from './event';
+export type { ReplayEvent, ReplayRecordingData } from './replay';
 export type { EventProcessor } from './eventprocessor';
 export type { Exception } from './exception';
 export type { Extra, Extras } from './extra';

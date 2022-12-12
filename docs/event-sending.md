@@ -76,18 +76,23 @@ This document gives an outline for how event sending works, and which which plac
 
 ## Replay (WIP)
 
-* `replay.sendReplayRequest()`
+* `replay.sendReplay()`
   * `createPayload()`
-  * `getReplayEvent()`
-    * `client._prepareEvent()` (see baseclient)
-      * `baseclient._applyClientOptions()`
-      * `baseclient._applyIntegrationsMetadata()`
-      * `scope.applyToEvent()`
-      * `baseclient._normalizeEvent()`
-    * `baseclient._updateSessionFromEvent()`
-  * `createReplayEnvelope()`
-    * `createEnvelope()`
-  * `transport.send()`
+  * `client.captureReplay()` (see baseclient)
+    * `baseclient._process()`
+    * `baseclient._captureReplay()`
+      * `baseclient._prepareEvent()`
+        * `baseclient._applyClientOptions()`
+        * `baseclient._applyIntegrationsMetadata()`
+        * `scope.applyToEvent()`
+        * `baseclient._normalizeEvent()`
+      * `baseclient._updateSessionFromEvent()`
+      * `baseclient._sendReplay()`
+        * `baseclient.createReplayEnvelope()`
+          * `getSdkMetadataForEnvelopeHeader()`
+          * `createEnvelope()`
+        * `baseclient._sendEnvelope()`
+          * `transport.send()`
 
 ## Client Reports
 

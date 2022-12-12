@@ -1,6 +1,5 @@
 import { getCurrentHub } from '@sentry/core';
 
-import { REPLAY_EVENT_NAME } from '../../src/constants';
 import { handleGlobalEventListener } from '../../src/coreHandlers/handleGlobalEvent';
 import { overwriteRecordDroppedEvent, restoreRecordDroppedEvent } from '../../src/util/monkeyPatchRecordDroppedEvent';
 import { ReplayContainer } from './../../src/replay';
@@ -30,13 +29,13 @@ afterEach(() => {
 
 it('deletes breadcrumbs from replay events', () => {
   const replayEvent = {
-    type: REPLAY_EVENT_NAME,
+    type: 'replay_event',
     breadcrumbs: [{ type: 'fakecrumb' }],
   };
 
   // @ts-ignore replay event type
   expect(handleGlobalEventListener(replay)(replayEvent)).toEqual({
-    type: REPLAY_EVENT_NAME,
+    type: 'replay_event',
   });
 });
 
