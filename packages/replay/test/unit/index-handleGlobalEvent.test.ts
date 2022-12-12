@@ -27,40 +27,6 @@ afterEach(() => {
   replay.stop();
 });
 
-it('deletes breadcrumbs from replay events', () => {
-  const replayEvent = {
-    type: 'replay_event',
-    breadcrumbs: [{ type: 'fakecrumb' }],
-  };
-
-  // @ts-ignore replay event type
-  expect(handleGlobalEventListener(replay)(replayEvent)).toEqual({
-    type: 'replay_event',
-  });
-});
-
-it('does not delete breadcrumbs from error and transaction events', () => {
-  expect(
-    handleGlobalEventListener(replay)({
-      breadcrumbs: [{ type: 'fakecrumb' }],
-    }),
-  ).toEqual(
-    expect.objectContaining({
-      breadcrumbs: [{ type: 'fakecrumb' }],
-    }),
-  );
-  expect(
-    handleGlobalEventListener(replay)({
-      type: 'transaction',
-      breadcrumbs: [{ type: 'fakecrumb' }],
-    }),
-  ).toEqual(
-    expect.objectContaining({
-      breadcrumbs: [{ type: 'fakecrumb' }],
-    }),
-  );
-});
-
 it('only tags errors with replay id, adds trace and error id to context for error samples', async () => {
   const transaction = Transaction();
   const error = Error();
