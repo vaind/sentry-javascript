@@ -19,4 +19,6 @@ export type DataCategory =
   // SDK internal event, like client_reports
   | 'internal'
   // Profile event type
-  | 'profile';
+  | 'profile'
+  // Replay event type
+  | 'replay_event';

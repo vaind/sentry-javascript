@@ -1,4 +1,4 @@
-import { Scope } from '@sentry/core';
+import { prepareEvent, Scope } from '@sentry/core';
 import { Client, Event } from '@sentry/types';
 
 export async function getReplayEvent({
@@ -11,10 +11,18 @@ export async function getReplayEvent({
   scope: Scope;
   replayId: string;
   event: Event;
-}): Promise<Event> {
-  // XXX: This event does not trigger `beforeSend` in SDK
-  // @ts-ignore private api
-  const preparedEvent: Event = await client._prepareEvent(event, { event_id }, scope);
+}): Promise<Event | null> {
+  const preparedEvent = await prepareEvent(client.getOptions(), event, { event_id }, scope);
+
+  // If e.g. a global event processor returned null
+  if (!preparedEvent) {
+    return null;
+  }
+
+  // This normally happens in browser client "_prepareEvent"
+  // but since we do not use this private method from the client, but rather the plain import
+  // we need to do this manually.
+  preparedEvent.platform = preparedEvent.platform || 'javascript';
 
   // extract the SDK name because `client._prepareEvent` doesn't add it to the event
   const metadata = client.getOptions() && client.getOptions()._metadata;

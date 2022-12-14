@@ -939,6 +939,14 @@ export class ReplayContainer implements ReplayContainerInterface {
     };
 
     const replayEvent = await getReplayEvent({ scope, client, replayId, event: baseEvent });
+
+    if (!replayEvent) {
+      // Taken from baseclient's `_processEvent` method, where this is handled for errors/transactions
+      client.recordDroppedEvent('event_processor', 'replay_event', baseEvent);
+      __DEBUG_BUILD__ && logger.log('An event processor returned `null`, will not send event.');
+      return;
+    }
+
     replayEvent.tags = {
       ...replayEvent.tags,
       sessionSampleRate: this._options.sessionSampleRate,
