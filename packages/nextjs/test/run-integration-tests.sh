@@ -30,7 +30,7 @@ echo "Running integration tests on Node $NODE_VERSION"
 # make a backup of our config file so we can restore it when we're done
 mv next.config.js next.config.js.bak
 
-for NEXTJS_VERSION in 10 11 12 13; do
+for NEXTJS_VERSION in 10 11 12 13.0.6; do
 
   # export this to the env so that we can behave differently depending on which version of next we're testing, without
   # having to pass this value from function to function to function to the one spot, deep in some callstack, where we
